@@ -1,0 +1,156 @@
+(dev) ➜  graph-rag-demo git:(main) ✗ sh run.sh                                
+[17:11:25] INFO graph_rag.builder: Question: What’s our current event streaming platform?
+[17:11:25] INFO graph_rag.builder: Answer:
+
+------------------------------------------------------
+Our current event streaming platform is Cloud Pub/Sub — we switched from Apache Kafka to Cloud Pub/Sub per ADR-0005 (accepted 2023-06-05), which supersedes the earlier Kafka decision.
+------------------------------------------------------   
+
+[17:11:43] INFO rag.query: Question:
+ What’s our current event streaming platform?
+[17:11:43] INFO rag.query: Answer:
+
+------------------------------------------------------
+Our current event streaming platform is Cloud Pub/Sub — ADR-0005: Switch to Cloud Pub/Sub (accepted 2023-06-05) replaces the earlier decision to use Apache Kafka.  
+
+We’ve also adopted Confluent Schema Registry with Avro for event schemas. 
+------------------------------------------------------   
+
+[17:11:53] INFO graph_rag.builder: Question: Which ADRs are related to service-to-service auth?
+[17:11:53] INFO graph_rag.builder: Answer:
+
+------------------------------------------------------
+Related ADRs:
+
+- ADR-0003: Service-to-Service Authentication with OAuth2 — defines the OAuth2 client‑credentials flow (Keycloak) and token injection/validation.  
+- ADR-0007: Deprecate mTLS Authentication — amends ADR-0003 and deprecates mTLS in favor of OAuth2.  
+- ADR-0004: Adopt API Gateway for External Traffic — references ADR-0003 (related concern: centralized authentication enforcement).
+------------------------------------------------------   
+
+[17:12:16] INFO rag.query: Question:
+ Which ADRs are related to service-to-service auth?
+[17:12:16] INFO rag.query: Answer:
+
+------------------------------------------------------
+The ADRs directly related to service-to-service authentication are:
+
+- ADR-0003 — Service-to-Service Authentication (use OAuth2 Client Credentials, Keycloak)   
+- ADR-0007 — Deprecate mTLS Authentication (amends ADR-0003; move to OAuth2-only) 
+
+Related ADRs that reference or depend on that decision:
+
+- ADR-0004 — Adopt API Gateway (centralizes enforcement of authentication; references ADR-0003)   
+- Several other ADRs reference ADR-0003 where cross-cutting auth implications are noted (see related mentions) 
+
+If you want, I can open the full ADR texts or extract the relevant sections (decisions, consequences, migration notes) for each one.
+------------------------------------------------------   
+
+[17:12:22] INFO graph_rag.builder: Question: What alternatives were considered for authentication?
+[17:12:22] INFO graph_rag.builder: Answer:
+
+------------------------------------------------------
+The ADR considered:
+- mTLS — considered but rejected due to operational complexity.
+- API keys — rejected as insufficient for fine-grained access.
+
+(Related ADRs also discussed a dual approach—keeping both mTLS and OAuth2—but it was rejected as too complex.)
+------------------------------------------------------   
+
+[17:12:34] INFO rag.query: Question:
+ What alternatives were considered for authentication?
+[17:12:34] INFO rag.query: Answer:
+
+------------------------------------------------------
+Short answer — the docs considered mutual TLS (mTLS), API keys, and a dual mTLS+OAuth2 approach. The team chose OAuth2 (Client Credentials) with Keycloak and sidecar-injected tokens.
+
+Details:
+- mTLS — considered but judged operationally complex and ultimately deprecated in favor of OAuth2  .  
+- API keys — considered but found insufficient for fine‑grained access control .  
+- Dual approach (keep both mTLS and OAuth2) — explicitly rejected as too complex .  
+
+Final decision: use OAuth2 Client Credentials with Keycloak as the IdP; tokens are injected by sidecars at runtime .
+------------------------------------------------------   
+
+[17:12:45] INFO graph_rag.builder: Question: Which services are impacted by auth decisions?
+[17:12:45] INFO graph_rag.builder: Answer:
+
+------------------------------------------------------
+Short answer: essentially every microservice that either accepts or calls other services — plus external-facing endpoints and some infra components.
+
+Details (who is impacted and what they must change)
+- All internal microservices (any service that calls or is called by others)
+  - Must use OAuth2 Client Credentials for service-to-service auth.
+  - If they act as a resource server: validate incoming access tokens (add/upgrade token validation libraries).
+  - If they act as a client: obtain client_credentials tokens from Keycloak (or rely on sidecar injection).
+  - Examples from the repo: Order Service, Customer Service, Inventory Service.
+- External-facing services / entry points
+  - Kong API Gateway: enforces centralized authentication for external clients.
+  - Services behind the gateway must integrate with Kong policies and any gateway-level auth flows.
+- Legacy services currently using mTLS
+  - Impacted because ADR-0007 deprecates mTLS; they need a migration plan to OAuth2.
+  - May break backward compatibility until migrated.
+- Infrastructure and platform components
+  - Keycloak (IdP): central issuing/management of client credentials and tokens.
+  - Sidecar proxies (token injection): must be deployed/configured for services.
+  - Token validation tooling, CI/CD (for schema/rotation), and observability (to monitor auth).
+- Operational teams
+  - Must handle credential lifecycle (rotation), update runbooks, and support migration.
+
+If you want, I can:
+- produce a migration checklist per service (what code/config changes, testing, rollout steps), or
+- generate a prioritized list of currently-known services to migrate first (e.g., based on traffic or legacy-mTLS usage).
+------------------------------------------------------   
+
+[17:13:04] INFO rag.query: Question:
+ Which services are impacted by auth decisions?
+[17:13:04] INFO rag.query: Answer:
+
+------------------------------------------------------
+Short answer — the auth decisions affect every layer that handles authentication or authorization. Specifically:
+
+- Service-to-service (all microservices) — every backend service that calls or is called by another service must adopt OAuth2 client-credentials flows and token validation (tokens injected by sidecars). 
+- External-facing endpoints / clients — all services exposed to external clients now sit behind the Kong API Gateway, so the gateway will centrally enforce auth for those requests. 
+- Legacy mTLS clients and services — services still using mutual TLS are impacted by the deprecation (they must migrate to OAuth2), and some backward-compatibility breaks are expected.  
+- Infrastructure and platform components — sidecar proxies (token injection), the IdP (Keycloak), and any token-validation libraries or gateway plugins must be updated or configured to support OAuth2 and key rotation.  
+- Clients and integrations that used direct auth mechanisms (e.g., API keys or mTLS) — these will need migration or a compatibility layer to work with the new OAuth2 flow enforced by the gateway/sidecars.  
+
+If you want, I can:
+- Produce a concrete list of your services (e.g., Order, Customer, Inventory) and mark which need work, or
+- Draft a migration checklist for legacy mTLS clients, or
+- Outline the changes required for sidecars, Keycloak, and gateway plugins. Which would you like next?
+------------------------------------------------------   
+
+[17:13:20] INFO graph_rag.builder: Question: Timeline of messaging platform decisions?
+[17:13:20] INFO graph_rag.builder: Answer:
+
+------------------------------------------------------
+Here are the messaging-platform decisions in chronological order:
+
+- 2022-09-14 — ADR-0001: Use Kafka for Event Streaming (file: 0001-use-kafka-for-event-streaming.md)  
+  - Decision: Adopt Apache Kafka (deploy on Kubernetes using Confluent for Kubernetes).  
+  - Rationale: reliable messaging backbone to decouple microservices.  
+  - Consequences/notes: high operational overhead; alternatives rejected included RabbitMQ and Azure Service Bus.  
+  - Status: Accepted (later superseded).
+
+- 2023-06-05 — ADR-0005: Switch to Cloud Pub/Sub (file: 0005-switch-to-cloud-pubsub.md)  
+  - Decision: Switch from self-managed Apache Kafka to Cloud Pub/Sub (managed service).  
+  - Rationale: running Kafka was a heavy operational burden; managed service reduces ops complexity.  
+  - Consequences/notes: reduced operational complexity but introduces vendor lock-in and requires migration from existing Kafka topics; alternatives considered included staying on self-managed Kafka and Confluent Cloud (rejected for cost/ops reasons).  
+  - Status: Accepted — supersedes ADR-0001.
+------------------------------------------------------   
+
+[17:13:39] INFO rag.query: Question:
+ Timeline of messaging platform decisions?
+[17:13:39] INFO rag.query: Answer:
+
+------------------------------------------------------
+Here’s a concise timeline of the messaging / event-streaming platform decisions in your ADRs:
+
+- 2022-09-14 — ADR-0001: Use Kafka for Event Streaming — Accepted; initial decision to adopt Apache Kafka (deployed on Kubernetes / Confluent) as the system’s event streaming backbone.  
+
+- 2023-06-05 — ADR-0005: Switch to Cloud Pub/Sub — Accepted; decision to migrate from self-managed Kafka to the cloud provider’s managed Pub/Sub service (this ADR supersedes ADR-0001).  
+
+- 2023-10-20 — ADR-0008: Introduce Schema Registry for Event Contracts — Accepted; adopt Confluent Schema Registry with Avro and enforce compatibility checks for event schemas (applies regardless of transport choice to manage event evolution safely).  
+
+Would you like this exported as a timeline graphic, CSV, or extended summary of migration impacts and next steps?
+------------------------------------------------------

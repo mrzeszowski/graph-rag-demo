@@ -1,0 +1,8 @@
+
+# requirements.txt
+neo4j>=5.26.0
+neo4j-graphrag[openai,experimental,]>=0.6.0
+openai>=1.40.0
+langchain>=0.2.16
+langchain-openai>=0.2.2
+python-dotenv>=1.0.1

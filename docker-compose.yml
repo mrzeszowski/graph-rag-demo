@@ -1,0 +1,18 @@
+services:
+  neo4j_5c42:
+    image: neo4j:latest
+    volumes:
+        - /$HOME/neo4j/logs:/logs
+        - /$HOME/neo4j/config:/config
+        - /$HOME/neo4j/data:/data
+        - /$HOME/neo4j/plugins:/plugins
+    environment:
+        - NEO4J_AUTH=neo4j/vvbI3HwJG4SKzIw
+        - NEO4J_PLUGINS=["apoc"]
+        - NEO4J_dbms_default__database=graph.rag.demo
+        - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+        - NEO4J_dbms_security_procedures_allowlist=apoc.*,apoc.meta.data
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    restart: always
