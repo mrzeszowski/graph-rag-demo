@@ -69,6 +69,7 @@ async def main() -> None:
                 ids=ids,
                 embedding_property="embedding",
                 embeddings=embeddings,
+                neo4j_database=settings.database,
                 entity_type=EntityType.NODE,
             )
         log_ctx.info("Vector upsert completed", count=len(ids))

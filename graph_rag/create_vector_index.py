@@ -1,7 +1,6 @@
 import asyncio
 import os
 import sys
-from timeit import main
 
 from neo4j import GraphDatabase
 from neo4j_graphrag.indexes import create_vector_index
@@ -36,8 +35,9 @@ async def main() -> None:
                 settings.vector_index,
                 label="Chunk",
                 embedding_property="embedding",
-                dimensions=3072,
+                dimensions=settings.embedding_dimensions,
                 similarity_fn="cosine", #"euclidean",
+                neo4j_database=settings.database,
             )
         log_ctx.info("Vector index created")
     except Exception as e:

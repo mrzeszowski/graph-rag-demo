@@ -44,7 +44,7 @@ class ContextLoggerAdapter(logging.LoggerAdapter):
 
 _DEFAULT_CONTEXT_KEYS_MINIMAL = (
 	"run_id",
-	#"source",
+	"source",
 	"op",
 	"question",
 	"path",

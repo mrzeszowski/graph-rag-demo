@@ -10,9 +10,9 @@ scripts=(
 )
 
 questions=(
-    "What’s our current event streaming platform?"
+    "What is our current event streaming platform, and which ADR superseded the previous one? (ids + dates)"
+    "Given we switched to Pub/Sub, what ADR(s) still govern event contract/schema governance, and what tooling do we use?"
     "Which ADRs are related to service-to-service auth?"
-    "What alternatives were considered for authentication?"
     "Which services are impacted by auth decisions?"
     "Timeline of messaging platform decisions?"
 )

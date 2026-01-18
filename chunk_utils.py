@@ -1,12 +1,8 @@
 from pathlib import Path
 from typing import List
 
-try:
-    # LangChain >= 0.1 moved text splitters into a dedicated distribution.
-    from langchain_text_splitters import RecursiveCharacterTextSplitter
-except ImportError:  # pragma: no cover
-    # Back-compat for older LangChain versions.
-    from langchain.text_splitter import RecursiveCharacterTextSplitter
+# LangChain text splitters live in a dedicated distribution.
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
 from config import settings
@@ -14,14 +10,21 @@ from logger_factory import get_logger
 
 log = get_logger("chunk_utils")
 
-def chunk_documents(raw_text: str, path: Path, index: int) -> List[Document]:
+def chunk_documents(raw_text: str, path: Path, doc_index: int) -> List[Document]:
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=settings.chunk_size,
         chunk_overlap=settings.chunk_overlap,
         separators=["\n\n", "\n", ". ", " "]
     )
     chunks = splitter.split_text(raw_text)
-    return [Document(page_content=chunk, metadata={"source": path.name, "index": index}) for chunk in chunks]
+    # IMPORTANT: "doc_index" identifies the file in this run; "chunk_index" is the position within that file.
+    return [
+        Document(
+            page_content=chunk,
+            metadata={"source": path.name, "doc_index": doc_index, "chunk_index": chunk_index},
+        )
+        for chunk_index, chunk in enumerate(chunks)
+    ]
 
 def get_documents() -> List[Document]:
 

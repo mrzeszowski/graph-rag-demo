@@ -1,0 +1,170 @@
+timestamp: 2026-01-18T20:00:07.207572+01:00
+session: true
+header: run.sh batch
+
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T20:00:15.756202+01:00
+source: graph_rag
+
+Question:
+What is our current event streaming platform, and which ADR superseded the previous one? (ids + dates)
+
+Answer:
+- Current event streaming platform: Cloud Pub/Sub (ADR-0005, 2023-06-05)
+- ADR superseding the previous one: ADR-0005 supersedes ADR-0001 (ADR-0001 dated 2022-09-14)
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T20:00:40.045945+01:00
+source: rag
+
+Question:
+What is our current event streaming platform, and which ADR superseded the previous one? (ids + dates)
+
+Answer:
+- Current event streaming platform: ADR-0005 — Switch to Cloud Pub/Sub, Date: 2023-06-05. ADR-0005 supersedes ADR-0001: Use Kafka for Event Streaming.  
+
+- Superseded (previous ADR): ADR-0001 — Use Kafka for Event Streaming, Date: 2022-09-14.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T20:00:49.035995+01:00
+source: graph_rag
+
+Question:
+Given we switched to Pub/Sub, what ADR(s) still govern event contract/schema governance, and what tooling do we use?
+
+Answer:
+- ADR(s) governing event contracts/schema governance: ADR-0008: Introduce Schema Registry for Event Contracts (Accepted 2023-10-20). It still governs how event schemas evolve and are validated, even after switching to Pub/Sub.
+
+- Tooling used: Confluent Schema Registry with Avro schemas for all events; compatibility checks enforced in CI/CD pipelines (to ensure backward/forward compatibility and safe schema evolution).
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T20:01:20.977416+01:00
+source: rag
+
+Question:
+Given we switched to Pub/Sub, what ADR(s) still govern event contract/schema governance, and what tooling do we use?
+
+Answer:
+- ADR for event contract/schema governance: ADR-0008: Introduce Schema Registry for Event Contracts. It defines using a schema registry (Confluent Schema Registry) with Avro schemas for all events and enforces compatibility checks in CI/CD. 
+
+- Tooling: Confluent Schema Registry with Avro schemas, plus CI/CD-enforced compatibility checks. 
+
+- Pub/Sub adoption governance: ADR-0005: Switch to Cloud Pub/Sub governs the move to Pub/Sub (this ADR supersedes ADR-0001: Use Kafka for Event Streaming). 
+
+- Note: ADR-0001 is superseded by ADR-0005.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T20:01:35.579180+01:00
+source: graph_rag
+
+Question:
+Which ADRs are related to service-to-service auth?
+
+Answer:
+- ADR-0003: Service-to-Service Authentication with OAuth2
+- ADR-0007: Deprecate mTLS Authentication (amends ADR-0003)
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T20:01:58.286581+01:00
+source: rag
+
+Question:
+Which ADRs are related to service-to-service auth?
+
+Answer:
+- ADR-0003: Service-to-Service Authentication with OAuth2. 
+- ADR-0007: Deprecate mTLS Authentication (amends ADR-0003: Service-to-Service Authentication). 
+
+( ADR-0007 explicitly amends ADR-0003, reinforcing the relation between them.  )
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T20:02:10.619319+01:00
+source: graph_rag
+
+Question:
+Which services are impacted by auth decisions?
+
+Answer:
+- All internal microservices that talk to each other (the service-to-service graph).  
+- Typical examples mentioned in the ADRs include the Order Service, Customer Service, and Inventory Service, plus any other services acting as callers or providers in internal API calls.  
+- The shift to OAuth2 with Keycloak and token-injecting sidecars means these services must integrate with OAuth2 token issuance/validation and migrate away from mTLS for authentication. Legacy mTLS clients are impacted and require a migration path.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T20:02:34.133370+01:00
+source: rag
+
+Question:
+Which services are impacted by auth decisions?
+
+Answer:
+In this system, auth decisions affect both external-facing entry points and internal service communication:
+
+- External clients reaching the system through the API gateway (the single entry point). Auth decisions are centralized at the gateway to enforce authentication for all external traffic. 
+
+- Internal service-to-service communication. Microservices authenticate and authorize each other using OAuth2 (Client Credentials) with Keycloak as the IdP, with tokens injected by sidecar proxies at runtime. This means all internal services that talk to one another are impacted by auth decisions. 
+
+- All services must support token validation and handle key rotation, since tokens and credentials are centrally managed. 
+
+- The move away from mTLS to OAuth2-only authentication also guides which services must implement OAuth2-based auth going forward. 
+
+In short: auth decisions affect the external gateway-facing services and the entire set of internal microservices that authenticate to each other via OAuth2, plus the tooling (token validation, key rotation) that supports that model. fileciteturn0file5turn0file7turn0file1turn0file2
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T20:02:44.954895+01:00
+source: graph_rag
+
+Question:
+Timeline of messaging platform decisions?
+
+Answer:
+Here’s the timeline of messaging platform decisions:
+
+- 2022-09-14: ADR-0001 – Use Kafka for Event Streaming
+  - Decision: Adopt Apache Kafka as the event streaming platform (on Kubernetes with Confluent for Kubernetes).
+  - Consequences: High operational overhead; strong ecosystem; supports event replay/retention.
+  - Status: Accepted.
+
+- 2023-06-05: ADR-0005 – Switch to Cloud Pub/Sub
+  - Decision: Switch from Apache Kafka to Cloud Pub/Sub as the event streaming platform.
+  - Consequences: Reduced operational complexity; easier cloud integration; risk of vendor lock-in; migration effort required.
+  - Status: Accepted.
+  - Supersedes: ADR-0001: Use Kafka for Event Streaming.
+
+Summary: The system moved from an initial Kafka-based approach (2022) to a managed Cloud Pub/Sub approach (2023), with ADR-0005 explicitly superseding the earlier ADR.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T20:03:19.291336+01:00
+source: rag
+
+Question:
+Timeline of messaging platform decisions?
+
+Answer:
+Here is a concise, date-ordered timeline of the messaging/platform decisions based on the ADRs in the docs:
+
+- 2022-09-14: ADR-0001: Use Kafka for Event Streaming. Initial decision to use Apache Kafka as the messaging backbone (accepted; later superseded). 
+
+- 2023-01-20: ADR-0003: Service-to-Service Authentication with OAuth2. Established OAuth2 (Keycloak) for service-to-service auth; later amended by ADR-0007. 
+
+- 2023-02-15: ADR-0004: Adopt API Gateway for External Traffic. Chose Kong as the single entry point for external requests. 
+
+- 2023-06-05: ADR-0005: Switch to Cloud Pub/Sub. Switched the event-streaming backbone from Kafka to Google Cloud Pub/Sub (status: Accepted; supersedes ADR-0001). 
+
+- 2023-08-10: ADR-0006: Centralized Logging and Observability. Adopted the ELK stack for logs and Prometheus/Grafana for metrics. 
+
+- 2023-09-12: ADR-0007: Deprecate mTLS Authentication. Deprecated mTLS in favor of OAuth2-only authentication (amends ADR-0003). 
+
+- 2023-10-20: ADR-0008: Introduce Schema Registry for Event Contracts. Adopted Confluent Schema Registry with Avro; enforce compatibility in CI/CD. 
+
+If you’d like, I can turn this into a timeline graphic or extract just the decision titles and dates for a quick reference sheet.

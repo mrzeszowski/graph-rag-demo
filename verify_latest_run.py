@@ -328,12 +328,18 @@ def _wrap_paragraph(text: str, *, width: int, indent: str = "") -> str:
     )
 
 
-def _format_assessment_report(data: dict) -> Optional[str]:
+def _format_assessment_report(data: dict, *, max_bullets: int = 6) -> Optional[str]:
     """Format evaluator JSON into a terminal-friendly report."""
     assessments = data.get("assessments")
     executive = data.get("executive")
     if not isinstance(assessments, list) or not assessments:
         return None
+
+    try:
+        max_bullets = int(max_bullets)
+    except Exception:
+        max_bullets = 6
+    max_bullets = max(1, min(12, max_bullets))
 
     width = _terminal_width()
     lines: list[str] = []
@@ -360,7 +366,7 @@ def _format_assessment_report(data: dict) -> Optional[str]:
         lines.append(_wrap_paragraph(score_line, width=width))
 
         if isinstance(rationale, list) and rationale:
-            for bullet in rationale[:6]:
+            for bullet in rationale[:max_bullets]:
                 b = str(bullet).strip()
                 if not b:
                     continue
@@ -405,35 +411,68 @@ def _format_assessment_report(data: dict) -> Optional[str]:
     return "\n".join(lines).strip() + "\n"
 
 
-def build_comparison_prompt(*, results_text: str) -> list[dict]:
+def build_comparison_prompt(*, results_text: str, max_bullets: int = 6) -> list[dict]:
+    try:
+        max_bullets = int(max_bullets)
+    except Exception:
+        max_bullets = 6
+    max_bullets = max(1, min(12, max_bullets))
+
     system_text = (
         """
-You are an expert system evaluator specializing in:
+You are an expert evaluator specializing in:
 - Retrieval-Augmented Generation (RAG)
 - GraphRAG / Knowledge-Graph-based reasoning
 - Architecture Decision Records (ADRs)
 - Architecture governance, auditability, and semantic correctness
 
-Your task is to evaluate and compare **GraphRAG** and **classical RAG** answers
+You will evaluate and compare **GraphRAG** and **classical RAG** answers
 based strictly on the provided execution results.
 
 You must:
 - Compare GraphRAG vs RAG answers **per question**
-- Score each answer on a **0–10 scale**
-- Use **architectural usefulness**, not verbosity or writing style
+- Score each answer on a **0–10 integer scale**
+- Prioritize **architectural usefulness and semantic correctness**, not verbosity
 - Be conservative and precise — do not hallucinate missing facts
 - Base all judgments only on the supplied results
 
-### Evaluation dimensions (implicit, do NOT list them unless asked)
-Use these dimensions internally when scoring:
-1. Correctness (factual accuracy)
-2. Scope control (answers exactly what was asked)
-3. Structural fidelity (respects ADR semantics: supersedes, amends, alternatives vs decisions)
-4. Signal-to-noise ratio (no unnecessary expansion)
-5. Auditability (traceable to concrete ADRs and relationships)
+### Scoring rules (CRITICAL)
+These rules override all other heuristics:
+1) **Scope control is the #1 criterion.**
+   - If an answer materially expands beyond what the question asks ("scope creep"), it must be penalized.
+   - **Do NOT reward breadth.** More ADRs or extra narrative is not better unless the question explicitly asks for it.
+
+2) **Factual discipline / non-hallucination.**
+   - If an answer introduces concrete entities (ADRs, services, products, tools) that are not supported by the shown results,
+     penalize heavily.
+
+3) **Structural fidelity to ADR semantics.**
+   - Correct use of relationships like `supersedes`, `amends`, and clear separation of decisions vs alternatives.
+
+4) **Auditability.**
+   - Prefer answers that anchor claims to specific ADR ids/dates/relations present in the answers.
+
+### Hard caps (to avoid "nice story" scoring)
+Apply these caps strictly:
+- If the answer is mostly correct but includes **clear scope creep**: score must be **<= 6**.
+- If the answer includes **specific examples not grounded** (e.g., naming services/tools not evidenced): score must be **<= 5**.
+- If the answer is both off-scope and adds ungrounded specifics: score must be **<= 3**.
+
+### Example guidance (DO NOT quote this in output)
+If asked: "Timeline of messaging platform decisions?"
+- Only ADRs about messaging platform decisions (e.g., Kafka/Pub/Sub) and directly relevant lineage metadata are in-scope.
+- Adding auth, API gateway, schema governance ADRs is out-of-scope unless the question explicitly asks for a broader org timeline.
 
 ### Output requirements (STRICT)
 Return a single JSON object only (no Markdown, no prose, no code fences).
+
+### Brevity requirements (STRICT)
+Write like a slide deck / exec brief:
+- Use short, telegraphic bullets (fragments; no long sentences)
+- No filler, no hedging, no repeating the full answers
+- Prefer 1 clause per bullet
+- Do not quote large chunks of the answers
+- Keep outputs compact and scannable
 
 The JSON schema must be:
 {
@@ -443,23 +482,26 @@ The JSON schema must be:
             "graph_rag_score": integer 0-10,
             "rag_score": integer 0-10,
             "winner": "graph_rag" | "rag" | "tie" | "inconclusive",
-            "rationale": [string, ...]  // 2-6 concise bullets, architecture-focused
+            "rationale": [string, ...]  // 1-{MAX_BULLETS} concise bullets, architecture-focused
         }
     ],
     "executive": {
-        "summary": string, // 1-3 sentences
+        "summary": string, // 1-2 short sentences (<= 30 words total)
         "graph_rag_clearly_better": [string, ...],
         "rag_clearly_better": [string, ...],
         "ties_or_inconclusive": [string, ...],
-        "highlights": [string, ...] // up to 8 bullets
+        "highlights": [string, ...] // up to 5 bullets
     }
 }
 
 Rules:
 - Scores must be integers 0-10
-- Keep each bullet short (<= 140 chars)
+- Keep each bullet very short (<= 90 chars)
+- Keep each list short (<= 5 items), unless explicitly required by the schema
 - If information is insufficient to judge a delta, use winner="inconclusive" and explain why
 - Base all judgments only on the supplied results
+
+If you cannot comply with brevity, reduce detail rather than adding text.
 
 ### Style rules
 - Professional, analytical, architect-level tone
@@ -507,7 +549,12 @@ If a prior baseline/evaluation is not included in the input, state that clearly 
     return [
         {
             "role": "system",
-            "content": [{"type": "input_text", "text": system_text}],
+            "content": [
+                {
+                    "type": "input_text",
+                    "text": system_text.replace("{MAX_BULLETS}", str(max_bullets)),
+                }
+            ],
         },
         {
             "role": "user",
@@ -578,7 +625,7 @@ def main() -> int:
         t0 = time.perf_counter()
         with status("Calling OpenAI to compare GraphRAG vs RAG…"):
             resp = client.responses.create(
-                model=args.model,
+                model="gpt-5.2", # args.model,
                 input=prompt,
                 top_p=1.0,
                 metadata={
@@ -591,7 +638,7 @@ def main() -> int:
         log_ctx.info("Comparison complete", latency_s=f"{time.perf_counter() - t0:0.2f}")
         raw_text = _extract_output_text(resp)
         parsed = _extract_first_json_object(raw_text)
-        formatted = _format_assessment_report(parsed) if parsed else None
+        formatted = _format_assessment_report(parsed, max_bullets=args.max_bullets) if parsed else None
         print(formatted or raw_text)
         return 0
     finally:

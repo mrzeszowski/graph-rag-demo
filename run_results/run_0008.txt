@@ -1,0 +1,148 @@
+timestamp: 2026-01-18T19:09:09.965034+01:00
+session: true
+header: run.sh batch
+
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:09:15.824433+01:00
+source: graph_rag
+
+Question:
+What’s our current event streaming platform?
+
+Answer:
+Cloud Pub/Sub (Google Cloud Pub/Sub). We switched from Kafka per ADR-0005.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:09:28.341823+01:00
+source: rag
+
+Question:
+What’s our current event streaming platform?
+
+Answer:
+Cloud Pub/Sub (Google Cloud Pub/Sub) is our current event streaming platform.  This follows ADR-0005, which switches us from Kafka to Cloud Pub/Sub.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:09:34.967135+01:00
+source: graph_rag
+
+Question:
+Which ADRs are related to service-to-service auth?
+
+Answer:
+- ADR-0003: Service-to-Service Authentication with OAuth2
+- ADR-0007: Deprecate mTLS Authentication (amends ADR-0003)
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:10:27.192088+01:00
+source: rag
+
+Question:
+Which ADRs are related to service-to-service auth?
+
+Answer:
+- ADR-0003: Service-to-Service Authentication with OAuth2. This is the primary ADR describing how services authenticate with each other. 
+
+- ADR-0007: Deprecate mTLS Authentication. This ADR amends ADR-0003, making it directly related to the service-to-service auth approach. 
+
+- ADR-0004: Adopt API Gateway for External Traffic. This ADR is related to service-to-service auth through its cross-reference to ADR-0003. 
+
+- ADR-0006: Centralized Logging and Observability. This ADR is also related via cross-references to ADR-0003. 
+
+If you’d like, I can pull brief summaries from each ADR to give you a quick overview of how they tie into service-to-service authentication.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:10:33.626967+01:00
+source: graph_rag
+
+Question:
+What alternatives were considered for authentication?
+
+Answer:
+- mTLS (mutual TLS) — considered but operationally complex.
+- API Keys — insufficient for fine-grained access.
+
+(The chosen approach was OAuth2 Client Credentials flow with Keycloak as the IdP.)
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:10:48.135475+01:00
+source: rag
+
+Question:
+What alternatives were considered for authentication?
+
+Answer:
+Alternatives considered for authentication were mutual TLS (mTLS) and API keys, with mTLS deemed operationally complex and API keys insufficient for fine-grained access.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:11:00.598383+01:00
+source: graph_rag
+
+Question:
+Which services are impacted by auth decisions?
+
+Answer:
+- Internal microservices that talk to each other (service-to-service): e.g., Order Service, Customer Service, Inventory Service, and any other bounded-context services. These rely on OAuth2 tokens issued by Keycloak and validated by libraries.
+
+- Legacy/mTLS users or dual-auth clients: any service that previously used mTLS or a dual mechanism must migrate to OAuth2-only (per ADR-0007). They’re explicitly impacted by the deprecation.
+
+- External clients via the API gateway: external requests entering through Kong (per ADR-0004) will be authenticated/authorized at the gateway and then tokens are used for internal service access.
+
+In short, the auth decisions impact all internal microservices that perform service-to-service authentication, any legacy mTLS-enabled components, and external clients reaching the system through the API gateway.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:11:20.251077+01:00
+source: rag
+
+Question:
+Which services are impacted by auth decisions?
+
+Answer:
+- All microservices that talk to each other (service-to-service authentication) are impacted. The architecture expects secure, OAuth2-based authentication between services, so every service in the mesh that authenticates/authorizes others is affected. 
+
+- External client access is impacted because external traffic is funneled through a single API gateway (Kong) that enforces authentication for all external requests. This means external-facing services behind the gateway are affected by auth decisions. 
+
+- If mTLS is being deprecated, any service currently using mTLS must migrate to OAuth2-based authentication. This changes how those services establish trust and credentials. 
+
+- For context, internal services commonly involved in such communications include typical microservices like Order Service, Customer Service, and Inventory Service (as referenced in related architecture discussions).
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:11:31.020410+01:00
+source: graph_rag
+
+Question:
+Timeline of messaging platform decisions?
+
+Answer:
+- 2022-09-14: ADR-0001 - Use Kafka for Event Streaming. Status: Accepted. Superseded by ADR-0005. Rationale: provide a reliable messaging backbone for asynchronous event-driven communication between services.
+
+- 2023-06-05: ADR-0005 - Switch to Cloud Pub/Sub. Status: Accepted. Supersedes ADR-0001. Decision: Switch from Apache Kafka to Cloud Pub/Sub. Consequences: reduced operational complexity, easier cloud integration, risk of vendor lock-in, migration effort. Alternatives considered: continue with self-managed Kafka (rejected), Confluent Cloud Kafka (rejected).
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:12:03.744673+01:00
+source: rag
+
+Question:
+Timeline of messaging platform decisions?
+
+Answer:
+Here’s the messaging platform decision timeline found in the ADRs:
+
+- 2022-09-14: ADR-0001 — Use Kafka for Event Streaming. This was the initial decision to establish a reliable asynchronous messaging backbone. ADR-0001 is later superseded by ADR-0005. 
+
+- 2023-06-05: ADR-0005 — Switch to Cloud Pub/Sub as the event streaming platform. This decision supersedes ADR-0001 (moving away from Kafka to a managed Pub/Sub service). 
+
+- 2023-10-20: ADR-0008 — Introduce Schema Registry for Event Contracts. This adds strict schema management (Confluent Schema Registry with Avro) and enforces compatibility checks in CI/CD. 
+
+In short: the messaging backbone started with Kafka, shifted to Cloud Pub/Sub, and later added a schema-registry layer to manage event contracts. fileciteturn0file0turn0file8turn0file10

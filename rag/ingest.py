@@ -70,15 +70,12 @@ def main() -> None:
                 # Attach to store
                 client.vector_stores.files.create(vector_store_id=vs.id, file_id=f.id)
 
-            log_ctx.debug(
-                "Chunk uploaded",
-                chunk=i,
-                source=src,
+            log_ctx.debug("Chunk uploaded",chunk=i,source=src,
                 file_id=f.id,
                 latency_s=f"{time.perf_counter() - t0:0.2f}",
             )
             progress.update(task_id, advance=1)
-
+ 
             # Best-effort cleanup of temp file
             try:
                 os.remove(tmp.name)

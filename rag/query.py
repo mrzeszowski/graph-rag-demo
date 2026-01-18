@@ -61,8 +61,6 @@ def query():
     state = load_state()
     vector_store_id = state["vector_store_id"]
 
-    
-
     log_ctx.info("Starting query")
 
     t0 = time.perf_counter()
@@ -93,11 +91,7 @@ def query():
 
     log_ctx.info("Question", question=args.question)
 
-    log_ctx.info("""Answer:\n
-------------------------------------------------------
-%s
-------------------------------------------------------   
-""", out_text)
+    log_ctx.info("""Answer:\n%s""", out_text)
 
     result = write_run_result(question=args.question, answer=out_text, source="rag")
     log_ctx.info("Saved run result", path=result.path)

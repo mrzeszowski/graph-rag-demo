@@ -1,0 +1,146 @@
+timestamp: 2026-01-18T19:39:07.174924+01:00
+session: true
+header: run.sh batch
+
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:39:14.695087+01:00
+source: graph_rag
+
+Question:
+What is our current event streaming platform, and which ADR superseded the previous one? (ids + dates)
+
+Answer:
+- Current event streaming platform: Cloud Pub/Sub — ADR-0005 (Date: 2023-06-05)
+- Superseded ADR (the previous one): ADR-0001: Use Kafka for Event Streaming (Date: 2022-09-14)
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:39:35.619239+01:00
+source: rag
+
+Question:
+What is our current event streaming platform, and which ADR superseded the previous one? (ids + dates)
+
+Answer:
+- Current event streaming platform: Google Cloud Pub/Sub (ADR-0005: Switch to Cloud Pub/Sub). Date: 2023-06-05. Supersedes: ADR-0001: Use Kafka for Event Streaming (Date: 2022-09-14).  
+
+- ADR that superseded the previous one: ADR-0005 (Switch to Cloud Pub/Sub). Date: 2023-06-05. ADR-0001’s date: 2022-09-14.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:39:46.848011+01:00
+source: graph_rag
+
+Question:
+Given we switched to Pub/Sub, what ADR(s) still govern event contract/schema governance, and what tooling do we use?
+
+Answer:
+- ADRs governing event contract/schema governance: ADR-0008 — Introduce Schema Registry for Event Contracts. It remains the governing ADR for event contracts/schema even after switching to Pub/Sub (ADR-0005).
+- Tooling used: Confluent Schema Registry with Avro schemas for all events, with compatibility checks enforced in CI/CD pipelines.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:40:13.195296+01:00
+source: rag
+
+Question:
+Given we switched to Pub/Sub, what ADR(s) still govern event contract/schema governance, and what tooling do we use?
+
+Answer:
+- Governing ADR for event contract/schema governance: ADR-0008 — Introduce Schema Registry for Event Contracts. This ADR remains the standard for how we govern event contracts and schemas, specifying the use of a schema registry with Avro schemas and CI/CD compatibility checks. 
+
+- Tooling used: Confluent Schema Registry with Avro schemas (enforced through CI/CD compatibility checks). This is the mechanism described in ADR-0008 for managing event contracts. 
+
+- Context note: We switched our event streaming to Pub/Sub via ADR-0005, but ADR-0008 continues to govern event contract/schema governance. 
+
+- Related references: ADR-0001 (previous Kafka approach) and ADR-0005 (Switch to Pub/Sub) are connected contextually to this governance.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:40:19.005047+01:00
+source: graph_rag
+
+Question:
+Which ADRs are related to service-to-service auth?
+
+Answer:
+ADR-0003: Service-to-Service Authentication with OAuth2, and ADR-0007: Deprecate mTLS Authentication (which amends ADR-0003).
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:40:32.526484+01:00
+source: rag
+
+Question:
+Which ADRs are related to service-to-service auth?
+
+Answer:
+- ADR-0003: Service-to-Service Authentication with OAuth2 — uses OAuth2 Client Credentials with Keycloak; tokens injected by sidecar proxies. 
+- ADR-0007: Deprecate mTLS Authentication — amends ADR-0003 and moves to OAuth2-only authentication.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:40:44.398122+01:00
+source: graph_rag
+
+Question:
+Which services are impacted by auth decisions?
+
+Answer:
+- All microservices that communicate with each other (service-to-service calls). These internal services must implement OAuth2 token-based authentication, use token validation libraries, and participate in key rotation. Examples (in a typical system) include services that expose protected APIs and consume them—e.g., Order Service, Inventory Service, Customer Service (or any other internal services involved in inter-service calls).
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:41:07.252051+01:00
+source: rag
+
+Question:
+Which services are impacted by auth decisions?
+
+Answer:
+All microservices in the architecture are affected by auth decisions. Specifically:
+
+- Inter-service authentication/authorization applies to every microservice that talks to another (e.g., the system uses OAuth2 with tokens injected by sidecars for service-to-service calls) .
+- External access is governed at a single API gateway (Kong), so external clients are impacted by auth decisions via that gateway .
+- Examples of services typically involved in these patterns include Order Service, Customer Service, and Inventory Service (as used in the system’s ADR context) .
+- A shift from mTLS to OAuth2-only authentication implies auth decisions affect all services that previously used mTLS as well .
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:41:18.497502+01:00
+source: graph_rag
+
+Question:
+Timeline of messaging platform decisions?
+
+Answer:
+Here’s the messaging platform decision timeline extracted from the ADRs:
+
+- 2022-09-14 — ADR-0001: Use Kafka for Event Streaming. Status: Accepted. Rationale: Need a reliable messaging backbone to decouple microservices; initial deployment planned on Kubernetes using Confluent for Kubernetes.
+
+- 2023-06-05 — ADR-0005: Switch from Apache Kafka to Cloud Pub/Sub. Status: Accepted. Supersedes ADR-0001. Rationale: Cloud Pub/Sub reduces operational burden and maintenance; migration needed from existing Kafka topics; risk of vendor lock-in.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T19:41:57.742848+01:00
+source: rag
+
+Question:
+Timeline of messaging platform decisions?
+
+Answer:
+Here’s a concise timeline of the messaging platform decisions:
+
+- 2022-09-14 — ADR-0001: Use Kafka for Event Streaming. The team initially adopted Kafka as the messaging backbone. 
+
+- 2023-01-20 — ADR-0003: Service-to-Service Authentication with OAuth2. Authentication moved to OAuth2 (Keycloak) with tokens injected by sidecars. This complemented the messaging layer’s security model. 
+
+- 2023-06-05 — ADR-0005: Switch to Cloud Pub/Sub. The decision switched from Kafka to Cloud Pub/Sub, superseding ADR-0001. This marks the shift to a managed cloud messaging service. 
+
+- 2023-09-12 — ADR-0007: Deprecate mTLS Authentication. MTL S is deprecated in favor of OAuth2-only authentication (amends ADR-0003). 
+
+- 2023-10-20 — ADR-0008: Introduce Schema Registry for Event Contracts. Confluent Schema Registry with Avro schemas adopted to enforce event contracts. 
+
+Summary: The messaging platform evolved from an initial Kafka-based approach to a Cloud Pub/Sub backbone, with supporting changes in authentication (OAuth2) and event schema governance (schema registry) along the way. fileciteturn0file0turn0file12turn0file7turn0file10
