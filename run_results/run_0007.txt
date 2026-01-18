@@ -1,0 +1,154 @@
+timestamp: 2026-01-18T18:36:10.530926+01:00
+session: true
+header: run.sh batch
+
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T18:36:17.445030+01:00
+source: graph_rag
+
+Question:
+What’s our current event streaming platform?
+
+Answer:
+Cloud Pub/Sub (we switched from Kafka per ADR-0005).
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T18:36:31.710958+01:00
+source: rag
+
+Question:
+What’s our current event streaming platform?
+
+Answer:
+Cloud Pub/Sub (Google Cloud Pub/Sub) is our current event streaming platform. This was decided in ADR-0005, which supersedes the earlier ADR-0001 and switches us from Kafka to Pub/Sub.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T18:36:42.236263+01:00
+source: graph_rag
+
+Question:
+Which ADRs are related to service-to-service auth?
+
+Answer:
+- ADR-0003: Service-to-Service Authentication with OAuth2
+- ADR-0007: Deprecate mTLS Authentication (amends ADR-0003)
+- ADR-0004: Adopt API Gateway for External Traffic (related: ADR-0003)
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T18:36:55.203086+01:00
+source: rag
+
+Question:
+Which ADRs are related to service-to-service auth?
+
+Answer:
+- ADR-0003: Service-to-Service Authentication with OAuth2. 
+- ADR-0007: Deprecate mTLS Authentication (amends ADR-0003).
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T18:37:08.185787+01:00
+source: graph_rag
+
+Question:
+What alternatives were considered for authentication?
+
+Answer:
+- mTLS (mutual TLS)
+- API keys
+
+Notes:
+- mTLS was considered but deemed operationally complex.
+- API keys were considered but considered insufficient for fine-grained access.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T18:37:27.314795+01:00
+source: rag
+
+Question:
+What alternatives were considered for authentication?
+
+Answer:
+- mTLS (mutual TLS) — considered, but deemed operationally complex. 
+- API Keys — considered but insufficient for fine-grained access. 
+- In a later ADR, keeping a dual approach (mTLS + OAuth2) was considered but rejected as too complex. 
+
+For context, the eventual recommendation moved toward OAuth2 (Client Credentials flow with Keycloak).
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T18:37:38.345817+01:00
+source: graph_rag
+
+Question:
+Which services are impacted by auth decisions?
+
+Answer:
+All internal microservices that participate in service-to-service authentication are impacted. In the examples given, this includes:
+- Order Service
+- Customer Service
+- Inventory Service
+- any other bounded-context services that talk to each other
+
+They will need to validate OAuth2 tokens issued by Keycloak (via sidecar proxies). External-facing entry points (the API gateway) are also involved for external clients.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T18:38:03.049644+01:00
+source: rag
+
+Question:
+Which services are impacted by auth decisions?
+
+Answer:
+- External client-facing services accessed through the Kong API Gateway: authentication is centralized at the gateway, so all external traffic is impacted by auth decisions. 
+
+- Internal microservices communicating with each other (service-to-service): OAuth2 Client Credentials with Keycloak as IdP, with tokens injected by sidecar proxies, affects how these services authenticate/authorize with one another. 
+
+- Legacy clients using mTLS: mTLS is being deprecated in favor of OAuth2, so those clients will need migration to the new auth approach.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T18:38:15.107169+01:00
+source: graph_rag
+
+Question:
+Timeline of messaging platform decisions?
+
+Answer:
+- 2022-09-14: ADR-0001 - Use Kafka for Event Streaming
+  - Status: Accepted
+  - Superseded by: ADR-0005: Switch to Cloud Pub/Sub
+  - Context: Need a reliable messaging backbone for asynchronous event-driven communication between microservices (e.g., Order, Customer, Inventory).
+
+- 2023-06-05: ADR-0005 - Switch to Cloud Pub/Sub
+  - Status: Accepted
+  - Supersedes: ADR-0001
+  - Decision: Switch from Apache Kafka to Cloud Pub/Sub
+  - Consequences: Reduced operational complexity; easier integration with cloud services; risk of vendor lock-in; migration effort required
+  - Alternatives: Continue with self-managed Kafka (rejected); Confluent Cloud Kafka (rejected)
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T18:38:41.525150+01:00
+source: rag
+
+Question:
+Timeline of messaging platform decisions?
+
+Answer:
+Here’s a concise timeline of the messaging platform decisions:
+
+- 2022-09-14: ADR-0001 - Use Kafka for Event Streaming. This was the initial decision for the messaging backbone, later superseded by ADR-0005. 
+
+- 2023-06-05: ADR-0005 - Switch to Cloud Pub/Sub. This decision moves from Kafka to a managed Pub/Sub service and supersedes ADR-0001. 
+
+- 2023-10-20: ADR-0008 - Introduce Schema Registry for Event Contracts. This adds schema management (Confluent Schema Registry with Avro) and enforces compatibility in CI/CD. 
+
+Summary: The messaging platform evolved from a Kafka-based approach to a Cloud Pub/Sub backend, and later governance was strengthened with a dedicated event schema registry.

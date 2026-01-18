@@ -1,8 +1,12 @@
-from operator import ge
 from pathlib import Path
 from typing import List
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+try:
+    # LangChain >= 0.1 moved text splitters into a dedicated distribution.
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+except ImportError:  # pragma: no cover
+    # Back-compat for older LangChain versions.
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
 from config import settings
@@ -26,14 +30,14 @@ def get_documents() -> List[Document]:
 
     if not data_dir.exists():
         log.error("Data directory not found: %s", data_dir)
-        return
+        return []
 
     # Collect all Markdown files
     documents = []
     paths = sorted(data_dir.rglob("*.md"))
     if not paths:
         log.warning("No Markdown files found in %s", data_dir)
-        return
+        return []
 
     for i, p in enumerate(paths):
         log.info("Read file %d: %s", i, p)

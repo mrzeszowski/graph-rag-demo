@@ -8,9 +8,13 @@ import json
 import os
 import sys
 import tempfile
+import time
 
 from openai import OpenAI
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+try:
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+except ImportError:  # pragma: no cover
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
 if __name__ == "__main__":
@@ -18,7 +22,8 @@ if __name__ == "__main__":
     sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from config import settings, ensure_openai_key
 from chunk_utils import get_documents
-from logger_factory import get_logger
+from logger_factory import bind, get_logger, new_run_id
+from ui import progress_task, status
 
 log = get_logger("rag.ingest")
 
@@ -36,35 +41,54 @@ def save_state(vector_store_id: str, file_ids: List[str]) -> None:
 
 def main() -> None:
     ensure_openai_key()
-    docs =  get_documents()
+    run_id = new_run_id()
+    log_ctx = bind(log, run_id=run_id, source="rag", op="ingest", model=settings.embedding_model)
+
+    with status("Reading and chunking documents…"):
+        docs = get_documents()
+    log_ctx.info("Prepared chunks", chunks=len(docs))
 
     client = OpenAI()
-    vs = client.vector_stores.create(name=settings.vector_store_name)
+    with status("Creating OpenAI vector store…"):
+        vs = client.vector_stores.create(name=settings.vector_store_name)
+    log_ctx.info("Vector store ready", vector_store_id=vs.id, name=settings.vector_store_name)
 
     file_ids: List[str] = []
 
     # Upload each chunk as a separate file and attach to the vector store
-    for i, d in enumerate(docs, start=1):
-        log.info("Processing document chunk: %s", d.metadata.get("source"))
-        with tempfile.NamedTemporaryFile("w+b", suffix=f"_{i}.txt", delete=False) as tmp:
-            tmp.write(d.page_content.encode("utf-8"))
-            tmp.flush()
-            # Upload file
-            with open(tmp.name, "rb") as fh:
-                f = client.files.create(file=fh, purpose="assistants")
-            file_ids.append(f.id)
-            # Attach to store
-            client.vector_stores.files.create(vector_store_id=vs.id, file_id=f.id)
-        # Best-effort cleanup of temp file
-        try:
-            os.remove(tmp.name)
-        except OSError:
-            pass
+    with progress_task(description="Uploading chunks to vector store…", total=len(docs)) as (progress, task_id):
+        for i, d in enumerate(docs, start=1):
+            src = d.metadata.get("source")
+            t0 = time.perf_counter()
+            with tempfile.NamedTemporaryFile("w+b", suffix=f"_{i}.txt", delete=False) as tmp:
+                tmp.write(d.page_content.encode("utf-8"))
+                tmp.flush()
+                # Upload file
+                with open(tmp.name, "rb") as fh:
+                    f = client.files.create(file=fh, purpose="assistants")
+                file_ids.append(f.id)
+                # Attach to store
+                client.vector_stores.files.create(vector_store_id=vs.id, file_id=f.id)
+
+            log_ctx.debug(
+                "Chunk uploaded",
+                chunk=i,
+                source=src,
+                file_id=f.id,
+                latency_s=f"{time.perf_counter() - t0:0.2f}",
+            )
+            progress.update(task_id, advance=1)
+
+            # Best-effort cleanup of temp file
+            try:
+                os.remove(tmp.name)
+            except OSError:
+                pass
 
     save_state(vs.id, file_ids)
 
-    log.info("Created/updated vector store: %s | %s", vs.id, settings.vector_store_name)
-    log.info("Attached files: %s", file_ids)
+    log_ctx.info("Created/updated vector store", vector_store_id=vs.id, name=settings.vector_store_name)
+    log_ctx.info("Attached files", count=len(file_ids))
 
 if __name__ == "__main__":
     main()

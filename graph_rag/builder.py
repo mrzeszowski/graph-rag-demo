@@ -1,6 +1,7 @@
 import asyncio
 import os
 import sys
+import time
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import neo4j
@@ -18,8 +19,9 @@ if __name__ == "__main__":
 from config import settings, ensure_openai_key
 from chunk_utils import get_documents
 from config import data
-from logger_factory import get_logger
+from logger_factory import bind, get_logger, new_run_id
 from schema import NODE_TYPES, RELATIONSHIP_TYPES, PATTERNS
+from ui import status
 
 log = get_logger("graph_rag.builder")
 driver = neo4j.GraphDatabase.driver(settings.uri, auth=(settings.user, settings.password))
@@ -31,7 +33,8 @@ async def run_kg_pipeline_with_auto_schema(text: str) -> None:
     llm_model_params = {
         # "max_tokens": 2000,
         "response_format": {"type": "json_object"},
-        "temperature": 1,  # Lower temperature for more consistent output
+        #"temperature": 0,  # Lower temperature for more consistent output
+        "top_p": 1.0,
     }
 
     # Create the LLM instance
@@ -41,7 +44,7 @@ async def run_kg_pipeline_with_auto_schema(text: str) -> None:
     )
 
     # Create the embedder instance
-    embedder = OpenAIEmbeddings()
+    embedder = OpenAIEmbeddings(model=settings.embedding_model)
 
     try:
         # Create a SimpleKGPipeline instance without providing a schema
@@ -85,10 +88,28 @@ async def main() -> None:
     try:
         ensure_openai_key()
 
-        documents = get_documents()
-        
+        run_id = new_run_id()
+        log_ctx = bind(
+            log,
+            run_id=run_id,
+            source="graph_rag",
+            op="build",
+            model=settings.chat_model,
+            embedding_model=settings.embedding_model,
+            neo4j_uri=settings.uri,
+            neo4j_db=settings.database,
+        )
+
+        with status("Reading and chunking documents…"):
+            documents = get_documents()
+
         content = "\n\n".join(d.page_content for d in documents)
-        await run_kg_pipeline_with_auto_schema(content)
+        log_ctx.info("Starting KG pipeline", files=len({d.metadata.get("source") for d in documents}), chunks=len(documents))
+
+        t0 = time.perf_counter()
+        with status("Building knowledge graph (GraphRAG)…"):
+            await run_kg_pipeline_with_auto_schema(content)
+        log_ctx.info("KG pipeline finished", latency_s=f"{time.perf_counter() - t0:0.2f}")
 
         # for d in documents:
         #     log.info("Processing document chunk: %s", d.metadata.get("source"))

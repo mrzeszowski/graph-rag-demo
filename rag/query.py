@@ -5,6 +5,7 @@ import asyncio
 import json
 import os
 import sys
+import time
 
 from openai import OpenAI
 
@@ -14,10 +15,31 @@ if __name__ == "__main__":
     # Ensure project root on sys.path when running as a script
     sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from config import settings, ensure_openai_key
-from logger_factory import get_logger   
+from logger_factory import bind, get_logger, new_run_id
+from run_result_writer import write_run_result
+from ui import status
 
 log = get_logger("rag.query")
 client = OpenAI()
+
+
+def build_graphrag_like_messages(*, question: str) -> list[dict]:
+    system_text = "Answer the user question using the provided context."
+    user_text = f"""Question:
+{question}
+
+Answer:
+"""
+    return [
+        {
+            "role": "system",
+            "content": [{"type": "input_text", "text": system_text}],
+        },
+        {
+            "role": "user",
+            "content": [{"type": "input_text", "text": user_text}],
+        },
+    ]
 
 def load_state() -> dict:
     if not os.path.exists(STATE_PATH):
@@ -27,6 +49,9 @@ def load_state() -> dict:
 
 def query():
     ensure_openai_key()
+
+    run_id = new_run_id()
+    log_ctx = bind(log, run_id=run_id, source="rag", model=settings.chat_model)
 
     parser = argparse.ArgumentParser(description="Query the OpenAI Vector Store")
     parser.add_argument("--question", required=True, help="User question")
@@ -38,27 +63,21 @@ def query():
 
     
 
-    # Use the Responses API with retrieval via the vector store
-    response = client.responses.create(
-        model=settings.chat_model,
-        input=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "input_text",
-                        "text": args.question,
-                    },
-                ],
-            }
-        ],
-        # File search tool uses the vector store for retrieval
-        tools=[{"type": "file_search", "vector_store_ids": [vector_store_id]}],
-        tool_choice="auto",
-        metadata={"app": "classic-rag"},
-        # Attach our vector store id
-        # store={"file_search": {"vector_store_ids": [vector_store_id]}},
-    )
+    log_ctx.info("Starting query")
+
+    t0 = time.perf_counter()
+    with status("Calling OpenAI (classic RAG)…"):
+        # Use the Responses API with retrieval via the vector store
+        response = client.responses.create(
+            model=settings.chat_model,
+            input=build_graphrag_like_messages(question=args.question),
+            # File search tool uses the vector store for retrieval
+            tools=[{"type": "file_search", "vector_store_ids": [vector_store_id]}],
+            tool_choice="auto",
+            metadata={"app": "classic-rag", "run_id": run_id},
+            top_p=1.0,
+        )
+    log_ctx.info("OpenAI response received", latency_s=f"{time.perf_counter() - t0:0.2f}")
 
     # Extract text answer
     out_text = ""
@@ -72,13 +91,16 @@ def query():
                     if getattr(p, "type", None) == "output_text":
                         out_text += getattr(p, "text", "")
 
-    log.info("Question:\n %s", args.question)
+    log_ctx.info("Question", question=args.question)
 
-    log.info("""Answer:\n
+    log_ctx.info("""Answer:\n
 ------------------------------------------------------
 %s
 ------------------------------------------------------   
 """, out_text)
+
+    result = write_run_result(question=args.question, answer=out_text, source="rag")
+    log_ctx.info("Saved run result", path=result.path)
 
 
 async def main() -> None:

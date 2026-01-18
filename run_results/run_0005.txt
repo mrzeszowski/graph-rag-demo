@@ -1,0 +1,167 @@
+timestamp: 2026-01-18T17:50:43.706982+01:00
+session: true
+header: run.sh batch
+
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T17:50:57.173681+01:00
+source: graph_rag
+
+Question:
+What’s our current event streaming platform?
+
+Answer:
+Cloud Pub/Sub (Google Cloud Pub/Sub).
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T17:51:13.832361+01:00
+source: rag
+
+Question:
+What’s our current event streaming platform?
+
+Answer:
+Cloud Pub/Sub (Google Cloud Pub/Sub). ADR-0005 switches us from Kafka to Cloud Pub/Sub and supersedes the earlier Kafka-based ADR-0001.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T17:51:24.281382+01:00
+source: graph_rag
+
+Question:
+Which ADRs are related to service-to-service auth?
+
+Answer:
+- ADR-0003: Service-to-Service Authentication with OAuth2
+- ADR-0007: Deprecate mTLS Authentication (amends ADR-0003)
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T17:51:45.435843+01:00
+source: rag
+
+Question:
+Which ADRs are related to service-to-service auth?
+
+Answer:
+- ADR-0003: Service-to-Service Authentication with OAuth2. This is the primary ADR covering service-to-service authentication details. 
+
+- ADR-0007: Deprecate mTLS Authentication (amends ADR-0003: Service-to-Service Authentication). This ADR updates the approach by moving away from mTLS toward OAuth2-only authentication.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T17:52:09.471161+01:00
+source: graph_rag
+
+Question:
+What alternatives were considered for authentication?
+
+Answer:
+- mTLS (mutual TLS) authentication — considered, but deemed operationally complex; later deprecated in favor of OAuth2-only (ADR-0007).
+
+- API keys — considered, but insufficient for fine-grained access control (ADR-0004).
+
+- Dual approach (mTLS + OAuth2) — considered, but rejected due to complexity (ADR-0007).
+
+- For external traffic, gateway approach alternatives:
+  - No gateway / expose services directly — rejected for inconsistent policies (ADR-0004).
+  - Kong API Gateway — chosen as the single entry point to enforce authentication (ADR-0004).
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T17:52:30.431061+01:00
+source: rag
+
+Question:
+What alternatives were considered for authentication?
+
+Answer:
+The documented alternatives considered for authentication were:
+
+- Mutual TLS (mTLS)  
+- API keys  
+- A dual approach (keeping both mTLS and OAuth2), which was rejected as too complex
+
+For context, the ADRs note that options include mutual TLS, API keys, or OAuth2 flows, and the final decision favored OAuth2 (Client Credentials with Keycloak) with tokens injected by sidecar proxies.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T17:52:46.431744+01:00
+source: graph_rag
+
+Question:
+Which services are impacted by auth decisions?
+
+Answer:
+- All internal microservices that participate in service-to-service authentication (e.g., typical examples like Order Service, Customer Service, Inventory Service, and other bounded-context services) using OAuth2 client credentials with Keycloak.
+
+- Legacy services still using mTLS (subject to deprecation per ADR-0007 and migration to OAuth2).
+
+- External-facing services behind the Kong API Gateway, since external client requests are centralized through the gateway and enforced there.
+
+- Any services that must implement or use token validation libraries to verify OAuth2 tokens.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T17:53:19.967021+01:00
+source: rag
+
+Question:
+Which services are impacted by auth decisions?
+
+Answer:
+- External-facing services (the external client entry points). Since an API gateway ( Kong) is the single entry point and authentication is enforced there, external client access to backend services is impacted. This centralizes auth at the gateway. 
+
+- Internal services (service-to-service communication). OAuth2 with Keycloak and tokens injected by sidecar proxies affects how internal microservices authenticate and talk to each other. 
+
+- Legacy/mTLS-based services. Deprecating mTLS in favor of OAuth2 requires migrating services that still rely on mTLS.  
+
+- All services that validate tokens or rely on centralized credential management. Centralized control over credentials means services need token validation libraries and periodic key rotation. 
+
+If you'd like, I can map these to specific ADRs (0003, 0004, 0007) and quote the exact passages.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T17:53:34.559934+01:00
+source: graph_rag
+
+Question:
+Timeline of messaging platform decisions?
+
+Answer:
+- 2022-09-14: ADR-0001 - Use Kafka for Event Streaming (Accepted). Plan to run Kafka on Kubernetes with Confluent. Superseded later by ADR-0005.
+
+- 2023-06-05: ADR-0005 - Switch to Cloud Pub/Sub (Accepted). Supersedes ADR-0001; decision to move from Kafka to a managed Cloud Pub/Sub service to reduce operational burden (with migration effort and potential vendor lock-in).
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T17:54:21.604723+01:00
+source: rag
+
+Question:
+Timeline of messaging platform decisions?
+
+Answer:
+Here’s a concise timeline of the messaging platform decisions, based on the ADRs in your files:
+
+- 2022-09-14: ADR-0001 – Use Kafka for Event Streaming. Initial choice to adopt Kafka as the messaging backbone to decouple microservices. 
+  - Note: An earlier draft proposed Kafka on Kubernetes (Confluent) before the Pub/Sub switch. 
+
+- 2022-11-01: ADR-0002 – Database per Service. Not a messaging decision, but part of the same architecture evolution context. 
+
+- 2023-01-20: ADR-0003 – Service-to-Service Authentication with OAuth2 (Keycloak). Security for inter-service calls. 
+
+- 2023-02-15: ADR-0004 – Adopt API Gateway for External Traffic (Kong). Centralized entry point and cross-cutting concerns. 
+
+- 2023-06-05: ADR-0005 – Switch to Cloud Pub/Sub. Replaces Kafka with a managed Pub/Sub service to reduce ops burden. 
+  - This superseded the earlier Kafka-based plan (and the Kafka-on-Kubernetes approach noted in the draft). 
+
+- 2023-08-10: ADR-0006 – Centralized Logging and Observability (ELK + Prometheus/Grafana). Observability alignment, not strictly messaging but part of platform ops. 
+
+- 2023-09-12: ADR-0007 – Deprecate mTLS Authentication (move toward OAuth2). Security consolidation affecting how services authenticate. 
+
+- 2023-10-20: ADR-0008 – Introduce Schema Registry for Event Contracts (Confluent Schema Registry with Avro). Enforces schema evolution for events. 
+
+If you want, I can format this as a chart or a table with the ADR titles, dates, and a one-line takeaway for each.
