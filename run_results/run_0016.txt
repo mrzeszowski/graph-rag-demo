@@ -1,0 +1,429 @@
+timestamp: 2026-01-18T23:16:29.494646+01:00
+session: true
+header: run.sh batch
+
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T23:16:52.096534+01:00
+source: graph_rag
+
+Question:
+What is our current event streaming platform, and which ADR superseded the previous one? (ids + dates)
+
+Answer:
+- Current event streaming platform: Cloud Pub/Sub (ADR-0005, Date: 2023-06-05)
+- Superseded ADR: ADR-0001: Use Kafka for Event Streaming (Date: 2022-09-14) — superseded by ADR-0005.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T23:17:14.556921+01:00
+source: rag
+
+Question:
+What is our current event streaming platform, and which ADR superseded the previous one? (ids + dates)
+
+Answer:
+- Current event streaming platform: Cloud Pub/Sub. Evidence: ADR-0005 Switch to Cloud Pub/Sub (Date 2023-06-05) supersedes ADR-0001: Use Kafka for Event Streaming. 
+
+- ADR superseding the previous one: ADR-0005 supersedes ADR-0001 (Use Kafka for Event Streaming). ADR-0005 date: 2023-06-05; ADR-0001 date: 2022-09-14.  
+
+Ids and dates:
+- ADR-0005: 2023-06-05 (supersedes ADR-0001). 
+- ADR-0001: 2022-09-14 (superseded by ADR-0005).
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T23:17:37.758275+01:00
+source: graph_rag
+
+Question:
+Given we switched to Pub/Sub, what ADR(s) still govern event contract/schema governance, and what tooling do we use?
+
+Answer:
+- Governing ADR for event contract/schema governance: ADR-0008 — Introduce Schema Registry for Event Contracts.
+- Tooling used: Confluent Schema Registry with Avro schemas for all events, with compatibility checks enforced in CI/CD pipelines.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T23:18:17.315863+01:00
+source: rag
+
+Question:
+Given we switched to Pub/Sub, what ADR(s) still govern event contract/schema governance, and what tooling do we use?
+
+Answer:
+- Governing ADR for event contracts/schema governance: ADR-0008, Introduce Schema Registry for Event Contracts (event-schema-governance). This is the current authoritative guidance on how event contracts are managed and validated. 
+
+- Tooling we use: Confluent Schema Registry with Avro schemas for all events, with compatibility checks enforced in the CI/CD pipeline. 
+
+- Context note: We switched the event streaming platform to Pub/Sub under ADR-0005 (Switch to Cloud Pub/Sub).
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T23:18:44.319044+01:00
+source: graph_rag
+
+Question:
+What is the set of services impacted by the messaging platform migration, and why? (Use the dependency map/event streams to justify impact, not just a narrative summary.)
+
+Answer:
+Impacted services:
+- order-service
+- billing-service
+- notification-service
+- inventory-service
+
+Why (based on the dependency map / event streams):
+- order-service
+  - Produces orders.created (orders.created is the event topic produced by order-service).
+  - Also consumes inventory.reserved, so changes to the inventory/reservation event flow affect it as a subscriber (order-service is tied to both topics).
+- billing-service
+  - Consumes orders.created, so migrating the event platform requires reconfiguring its subscription to the orders.created topic.
+- notification-service
+  - Consumes orders.created, so its event intake must be preserved under the new Pub/Sub setup.
+- inventory-service
+  - Produces inventory.reserved, so its publishing path to the inventory.reserved topic must be migrated to the new platform.
+
+In short, the migration touches exactly the producers/consumers of the two topics in scope:
+- orders.created: produced by order-service; consumed by billing-service and notification-service.
+- inventory.reserved: produced by inventory-service; consumed by order-service.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T23:19:41.999997+01:00
+source: rag
+
+Question:
+What is the set of services impacted by the messaging platform migration, and why? (Use the dependency map/event streams to justify impact, not just a narrative summary.)
+
+Answer:
+Answer:
+
+The messaging platform migration (ADR-0005: Switch to Cloud Pub/Sub) directly impacts the four services that participate in the current event topics: orders.created and inventory.reserved. The dependency/event streams show which services produce/consume these topics, so those are the ones affected by moving the event backbone to Pub/Sub.
+
+Impacted services and why
+
+- order-service
+  - Why impacted: It publishes the orders.created event and also consumes the inventory.reserved event (per the event-production/consumption map). The Pub/Sub migration means order-service must be updated to publish to and subscribe from Pub/Sub topics instead of the previous broker, and its event contracts must align with the new platform. Evidence: orders.created is produced by order-service, and inventory.reserved is consumed by order-service, per the event mapping.  The topic definitions include orders.created as an event topic/stream. 
+
+- inventory-service
+  - Why impacted: It publishes the inventory.reserved event, which is consumed by order-service. The migration requires inventory-service to publish to Pub/Sub and to participate in Pub/Sub topic subscriptions. Evidence: inventory.reserved is produced by inventory-service, and order-service consumes it, per the event map.  The interfaces list inventory.reserved as an event topic/stream. 
+
+- billing-service
+  - Why impacted: It consumes the orders.created event. With the move to Pub/Sub, billing-service must subscribe to the Pub/Sub topic for orders.created and adapt its event-consumption logic to the new platform. Evidence: billing-service consumes orders.created, per the event-production/consumption mapping.  The same event topic/stream (orders.created) is defined in the interfaces. 
+
+- notification-service
+  - Why impacted: It also consumes the orders.created event. It will need to subscribe to the Pub/Sub version of orders.created and rewire its event-handling to Pub/Sub. Evidence: notification-service consumes orders.created, per the event mapping.  The orders.created topic/stream is defined in the interfaces. 
+
+Contextual notes from the migration/dependency sources
+
+- The migration choice is to switch from Kafka to Cloud Pub/Sub, which introduces an operational migration of topics and consumers and moves the event backbone to Pub/Sub. This is described as the central decision and its consequence includes migrating existing Kafka topics (i.e., the event topics above). 
+
+- The event topics involved in the system are orders.created and inventory.reserved, which are the precise entry points for the impacted services. These topics are part of the announced event-streaming platform and governance model.  
+
+- Governance/contract considerations around events (e.g., explicit schemas and stable contracts) are relevant as these services move to Pub/Sub, since event schemas and ownership need to be managed in the new platform. This is reflected in governance-related ADRs and notes about event contracts. 
+
+In short, the migration centers on the four services that touch the current event topics (order-service, inventory-service, billing-service, notification-service). They are the ones that must be updated to publish to and/or subscribe from Pub/Sub, driven directly by the topics orders.created and inventory.reserved defined in the dependency/event-stream map.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T23:20:35.832350+01:00
+source: graph_rag
+
+Question:
+Timeline of messaging platform decisions?
+
+Answer:
+Here’s the timeline of the messaging platform decisions:
+
+- 2022-09-14: ADR-0001 – Use Kafka for Event Streaming
+  - Decision accepted to use Kafka as the event streaming backbone.
+
+- 2023-06-05: ADR-0005 – Switch to Cloud Pub/Sub
+  - Decision accepted to switch from Kafka to Cloud Pub/Sub.
+  - Supersedes ADR-0001 (Kafka).
+  - Key reasons: reduced operational overhead, easier cloud integration.
+  - Consequences: potential vendor lock-in, migration effort required.
+  - Alternatives considered: continue with self-managed Kafka (rejected), Confluent Cloud Kafka (rejected).
+
+- 2024-01-17: ADR-0010 – Establish ADR Lineage (Supersedes/Amends) Metadata
+  - Not a messaging decision itself, but documents lineage between ADR-0001 and ADR-0005 for traceability.
+
+Current status (as of these ADRs): Messaging/streaming platform decided to be Cloud Pub/Sub, with Kafka superseded.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T23:20:59.620021+01:00
+source: rag
+
+Question:
+Timeline of messaging platform decisions?
+
+Answer:
+Here’s a concise timeline of the main messaging/platform decisions (ADR entries) in the repo:
+
+- 2022-09-14: ADR-0001 – Use Kafka for Event Streaming
+  Initial decision to use Kafka as the messaging backbone to decouple microservices (later superseded by ADR-0005). 
+
+- 2023-02-15: ADR-0004 – Adopt API Gateway for External Traffic
+  Establishes Kong as the single entry point for external clients and centralizes policies. 
+
+- 2023-06-05: ADR-0005 – Switch to Cloud Pub/Sub
+  Switches from Kafka to Google Cloud Pub/Sub to reduce operational overhead and simplify integration. 
+
+- 2023-09-12: ADR-0007 – Deprecate mTLS Authentication
+  Moves to OAuth2-only authentication to simplify security across services. 
+
+- 2024-01-10: ADR-0009 – Define Service Ownership and Dependency Map
+  Documents service ownership and runtime dependencies, aiding governance and change management. 
+
+- 2024-01-17: ADR-0010 – Establish ADR Lineage (Supersedes/Amends) Metadata
+  Introduces lineage and supersession for ADRs, clarifying how decisions relate and evolve. 
+
+- 2024-02-01: ADR-0011 – Define Auth Trust Graph and Service Call Policy
+  Defines trust graph and explicit service call policies for authorization and governance. 
+
+If you’d like, I can format this as a CSV or a timeline graphic, or pull additional ADRs related to schema governance or event streaming for a fuller picture.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T23:21:31.330853+01:00
+source: graph_rag
+
+Question:
+Find all ADRs that mention event streaming and schema governance, and reconcile them into one ‘operating model’ (platform + schema tool + enforcement point).
+
+Answer:
+Here are the ADRs in the provided context that mention event streaming and/or schema governance, followed by a consolidated operating model.
+
+ ADRs that mention event streaming and schema governance
+ - ADR-0001: Use Kafka for Event Streaming
+   - Content: Establishes Kafka as the event streaming backbone (initial decision; later superseded by ADR-0005).
+   - Status: Accepted; Superseded by ADR-0005.
+
+ - ADR-0005: Switch to Cloud Pub/Sub
+   - Content: Switches the event streaming platform from Kafka to a fully managed Cloud Pub/Sub service.
+   - Status: Accepted; Supersedes ADR-0001.
+
+ - ADR-0008: Introduce Schema Registry for Event Contracts
+   - Content: Introduces a centralized schema governance approach using Confluent Schema Registry with Avro schemas for all events; enforces compatibility checks at CI/CD pipelines.
+   - Status: Accepted; references and supersedes earlier guidance related to event contracts (supersedes ADR-0001 in terms of schema governance approach).
+
+Consolidated operating model (reconciled from ADR-0005 + ADR-0008)
+ - Platform (event streaming backbone): Cloud Pub/Sub
+   - Rationale: ADR-0005 moves the platform to Pub/Sub, reducing operational burden compared to self-managed Kafka clusters.
+
+ - Schema tool (schema governance for event contracts): Confluent Schema Registry with Avro schemas
+   - Rationale: ADR-0008 mandates a centralized schema registry and Avro schemas to enforce event contract governance and compatibility.
+
+ - Enforcement point (how governance is enforced): CI/CD compatibility checks
+   - Rationale: ADR-0008 specifies enforcing compatibility checks in CI/CD pipelines, ensuring that schema evolution is validated before deployment.
+
+How this operating model would work in practice (summary)
+ - All events use Avro schemas registered in Confluent Schema Registry.
+ - Event producers/consumers reference the appropriate schema by subject/version from the registry.
+ - Any schema change (evolution) must pass CI/CD compatibility checks (backward/forward/full compatibility as configured) before being promoted.
+ - The event backbone is Cloud Pub/Sub, which serves as the platform for publishing and consuming events.
+ - This model aligns with the lineage and governance layering described across the ADRs, notably the progression from ADR-0001 to ADR-0005 (platform) and ADR-0008 (schema governance).
+
+If you’d like, I can draft a single consolidated ADR document that formalizes this operating model (combining the platform, schema tool, and enforcement point) and reflect the supersedes/amends lineage.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T23:22:31.986857+01:00
+source: rag
+
+Question:
+Find all ADRs that mention event streaming and schema governance, and reconcile them into one ‘operating model’ (platform + schema tool + enforcement point).
+
+Answer:
+Here’s what I found in the ADR set that mention event streaming and/or schema governance, followed by a single, reconciled operating model.
+
+ADRs that mention event streaming and schema governance
+- ADR-0001: Use Kafka for Event Streaming — mentions event streaming as the backbone (superseded by ADR-0005). See that ADR supersedes ADR-0001 (ADR-0005) and ADR-0001 itself discusses using Kafka for event streaming. 
+- ADR-0005: Switch to Cloud Pub/Sub — defines the event streaming platform as Cloud Pub/Sub (supersedes the Kafka-based approach). This is the current platform for event streams. 
+- ADR-0008: Introduce Schema Registry for Event Contracts — establishes governance of event schemas by adopting a schema registry (Confluent Schema Registry with Avro) and enforcing compatibility in CI/CD. This is the explicit schema governance piece. 
+
+Additional context linking these ADRs
+- ADR-0005 is noted to run the event streaming on Cloud Pub/Sub (event streams run on Pub/Sub). 
+- The ADR lineage shows ADR-0005 supersedes ADR-0001 and ADR-0008 is related to the governance of event schemas, tying the platform, the schema tool, and governance together.  
+- The interface/topics example for events includes orders.created and inventory.reserved, illustrating the event streams and governance scope (use of a schema registry for event contracts). 
+
+Proposed unified operating model (platform + schema tool + enforcement point)
+- Operating model name (proposed): ADR-0012: Operating Model for Event Streaming and Schema Governance
+- Platform (event streaming backbone): Cloud Pub/Sub
+  - Rationale: ADR-0005 selects Cloud Pub/Sub as the event streaming platform, replacing the earlier Kafka approach. ADR-0005 explicitly shifts the platform to Pub/Sub. 
+  - Supporting note: Governance and usage references indicate event streams are run on Cloud Pub/Sub (e.g., “event streams RUN_ON cloud-pubsub”). 
+- Schema tool (schema governance for event contracts): Confluent Schema Registry with Avro
+  - Rationale: ADR-0008 adopts a centralized schema registry to enforce event contract compatibility. It specifies using Avro schemas and enforcing compatibility checks in CI/CD. 
+- Enforcement point(s):
+  - Primary: CI/CD pipelines enforce schema compatibility against the registry (as per ADR-0008). This gates changes to events and contracts before deployment. 
+  - Secondary (public interfaces): Public HTTP interfaces can be governed by an API gateway, enforcing contract-related controls as described in governance hooks. This is tied to ADR-0004 (API gateway) and ADR-0003/ADR-0007 for auth, but the explicit enforcement hook for public APIs is noted in governance mappings. 
+- Example event contract scope (illustrative topics): Orders and inventory events such as orders.created and inventory.reserved, which would be governed by the registry and exposed through the event platform. This aligns with the interfaces and topics shown in the ADR-related materials. 
+
+Notes and how these map to the “operating model”
+- The platform choice is clearly Cloud Pub/Sub per ADR-0005, which supersedes the Kafka-based approach in ADR-0001.  
+- The governance mechanism is centralized schema management via Confluent Schema Registry (AVRO), with compatibility checks enforced in CI/CD. 
+- Enforcement is implemented primarily through CI/CD gates on schema changes, with an additional public-interface enforcement path via an API gateway where applicable.  
+- The operating model can be documented as a single ADR (ADR-0012) describing the platform (Pub/Sub), the schema tool (Schema Registry), and the enforcement points (CI/CD + API gateway where relevant). The related ADRs (0001, 0005, 0008) provide the building blocks and traceability for this combined model. 
+
+If you’d like, I can draft the full ADR-0012 text (Context, Decision, Consequences, Rationale, and a Migration Plan) based on these sources.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T23:23:47.530127+01:00
+source: graph_rag
+
+Question:
+Which changes would be required to fully remove mTLS: list affected services, the governing ADR(s), and the downstream policy artifacts we must update (trust graph / service-call-policy).
+
+Answer:
+Here’s a concise plan for fully removing mTLS, based on the ADRs and policy artifacts in your context.
+
+A) Affected services (and related clients)
+- api-gateway
+- order-service
+- inventory-service
+- billing-service
+- notification-service
+- Clients/identities referenced in the trust graph:
+  - order-service-client
+  - api-gateway-client
+
+Why: The auth trust graph and the service-to-service edges shown in the policy ADRs center on these services and their client identities. The graph examples enumerate these services, and the policy edges (who may call whom with which scopes) apply to them.
+
+Key references:
+- Entities list includes these services (0011-auth-trust-graph-and-service-call-policy.md, CHUNK 3)
+- Identities include order-service-client and api-gateway-client (0011-auth-trust-graph-and-service-call-policy.md, CHUNK 4)
+
+B) Governing ADRs to update
+- ADR-0007: Deprecate mTLS Authentication
+  - Why: This is the primary decision to remove mTLS in favor of OAuth2-only. Any current or future guidance must reflect that mTLS is deprecated and no longer accepted.
+  - Related: It amends ADR-0003 (as noted in ADR-0007).
+- ADR-0003: Service-to-Service Authentication with OAuth2
+  - Why: The OAuth2-based model underpins the removal of mTLS; ensure references to mTLS are removed or clearly marked as superseded.
+- ADR-0011: Define Auth Trust Graph and Service Call Policy
+  - Why: This is the policy/trust-graph artifact that encodes the edges, identities, scopes, and enforcement points. It must be updated to remove any mTLS references and to codify OAuth2 as the sole mechanism.
+  - Note: This ADR explicitly documents a trust graph and policy; it will reflect the “mTLS DISALLOWED” stance, but you should remove or replace any explicit mTLS edges or notes.
+
+C) Downstream policy artifacts to update (trust graph and service-call-policy)
+- Trust graph/document: 0011-auth-trust-graph-and-service-call-policy.md
+  - Changes to make:
+    - Remove or nullify any mTLS-related edges or notes.
+    - Ensure the authentication mechanism is shown as OAuth2 (e.g., internal service-to-service AUTHENTICATED_BY oauth2-client-credentials) and that mTLS is not allowed anywhere in the graph.
+    - Update the “Enforcement point / trust boundary” details to reflect OAuth2 flows only.
+  - Why: This is the primary policy artifact defining who can call whom under OAuth2, and it must reflect that mTLS is no longer a valid mechanism.
+- Service-call-policy artifact (referenced as the policy ADR; the relevant items live in the policy sections within the ADR set)
+  - Changes to make:
+    - Update the policy edges in the policy ADR to require OAuth2-based authentication and eliminate any mTLS references.
+    - Update the “Allowed calls” and the required scopes/claims to align with OAuth2 instead of mTLS-based identity checks.
+    - Ensure governance ownership (security) continues to own the policy, but that the enforcement point and claims align with OAuth2.
+  - Why: The service-call-policy artifact codifies who is allowed to call whom with what scopes, and it must reflect OAuth2-only authentication.
+
+D) Additional related updates to consider ( Optional but recommended )
+- ADR-0003: Service-to-Service Authentication with OAuth2
+  - Update to remove or de-emphasize any remaining mentions of mTLS as an alternative, and clearly document OAuth2 as the sole mechanism.
+- ADR-0007 (the deprecation note)
+  - Update to include the final removal milestone and migration instructions for services still using mTLS (if you haven’t already captured this in your migration plan).
+- ADR lineage metadata (0010-adr-lineage-and-supersession-metadata.md)
+  - If you maintain lineage/docs for supersedes/amends, ensure it reflects that ADR-0007 supersedes/invalidates any mTLS-adjacent guidance.
+
+Migration-oriented quick notes
+- Inventory: Identify all service-to-service call paths currently relying on mTLS and map them to OAuth2 client-credentials or another OAuth2 flow.
+- migrate: Implement or verify OAuth2 client credentials in all call paths, update token validation libraries, and adjust any sidecars/gateways accordingly.
+- test: Validate all edges in the trust graph under OAuth2-only authentication and run end-to-end tests for call flows across the external/internal boundaries.
+
+If you want, I can turn this into a concrete change checklist with the exact lines to edit in each ADR and policy document.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T23:25:01.594556+01:00
+source: rag
+
+Question:
+Which changes would be required to fully remove mTLS: list affected services, the governing ADR(s), and the downstream policy artifacts we must update (trust graph / service-call-policy).
+
+Answer:
+Here is a compact, evidence-backed view of what must change to fully remove mTLS.
+
+1) Affected services
+- All services that participate in inter-service calls (i.e., the service-to-service trust graph). In practice, this includes the internal services that talk to one another via OAuth2/identity tokens once mTLS is removed (the architecture doc shows an example set of services and interaction patterns). Example services commonly listed: api-gateway, order-service, inventory-service, customer-service, billing-service, notification-service. These are presented in the system’s Service Entities illustration as representative targets and neighbors in the graph. 
+- Policy ownership for the inter-service policy is held by security (service-call-policy). This means changes will be driven by the security team and applied to the policy artifact accordingly. 
+- The trust graph itself will encode which service can call which, along with enforcement points and boundaries. The graph is the primary artifact to capture and maintain for this change. 
+
+2) Governing ADRs (what guides the change)
+- ADR-0007: Deprecate mTLS Authentication (approval to move away from mTLS toward OAuth2). This ADR explicitly governs the deprecation path and its consequences. 
+- ADR-0003: Service-to-Service Authentication with OAuth2 (the foundational model now used for inter-service auth). This ADR will be amended/relied upon as part of the removal. 
+- ADR-0004: Adopt API Gateway (defines the entry point and boundary handling, relevant for how external/internal calls are routed without mTLS). 
+- ADR-0011: Define Auth Trust Graph and Service Call Policy (governs the explicit trust graph and the service-call-policy that replaces mTLS-based enforcement). This ADR is the governing artifact for the downstream policy artifacts referenced below. 
+
+3) Downstream policy artifacts to update
+- Trust graph (the explicit authorization graph): You must define or update the trust graph to capture who can call whom, with the required audience, scopes/roles, enforcement point, and boundary. This is the central artifact enabling the migration away from mTLS, and it is explicitly discussed as a “trust graph” in the governing ADRs. 
+- Service-call-policy: You must update the policy that codifies allowed inter-service calls, including the exact call edges, required scopes, and policy ownership (security). The policy is the downstream artifact that enforces the new trust relationships. 
+- Related governance notes: The policy and trust graph changes are part of the broader ADR lineage (e.g., ADR-0003, ADR-0007, ADR-0004) and are coordinated by the Security team as the owners of the policy. 
+
+4) Additional notes for the transition
+- Expect a migration path: removing mTLS will require a covered migration plan for services that still rely on mTLS. This is explicitly noted as a consequence of moving away from mTLS. 
+- External boundary handling: external requests continue to enter via the API gateway, which remains part of the architecture and governs how external-to-internal trust is established in the new model. 
+- The “mTLS disallowed” stance is part of the current target state (as described in the related ADRs), reinforcing that mTLS must not be used for inter-service auth going forward. 
+
+If you’d like, I can map this to a concrete checklist with exact edge definitions for your current service set and draft the initial trust-graph and service-call-policy entries.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T23:25:42.867645+01:00
+source: graph_rag
+
+Question:
+Impact analysis: If we change the schema of orders.created, who must be involved (services + teams), and which ADR defines the compatibility/tooling requirements?
+
+Answer:
+- What is impacted (services):
+  - order-service (producer) – owned by the commerce team.
+  - billing-service (consumer) – owned by the commerce team (or the team responsible for billing).
+  - notification-service (consumer) – owned by the commerce team (or the team responsible for notifications).
+
+- Which teams must be involved:
+  - Commerce team (owns/order-service and the two consuming services) to coordinate schema changes and downstream adaptations.
+  - Platform team (governance/operational tooling) to manage the Schema Registry and CI/CD compatibility checks.
+  - Security team as needed for service-to-service auth considerations, per the governance map (though the auth model itself is defined in ADR-0003/ADR-0007).
+
+- What tooling/compatibility requirements apply:
+  - Defined by ADR-0008: Introduce Schema Registry for Event Contracts. This enforces compatibility checks at CI/CD pipelines and requires using the schema registry (Avro) for orders.created, with appropriate producer/consumer schema evolution controls.
+  - The need for impact analysis and coordinated change is also reflected in ADR-0009 (Define Service Ownership and Dependency Map), which documents who owns what and how changes cascade.
+
+- Practical next steps (high level):
+  - Update the orders.created Avro schema in the Schema Registry, ensuring backward/forward compatibility as appropriate.
+  - Update producer (order-service) and consumer (billing-service, notification-service) code and tests to align with the new schema.
+  - Run CI/CD checks to validate compatibility and roll out in a controlled manner.
+  - Communicate changes through the defined ownership map so all affected teams are aware.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-18T23:26:55.830090+01:00
+source: rag
+
+Question:
+Impact analysis: If we change the schema of orders.created, who must be involved (services + teams), and which ADR defines the compatibility/tooling requirements?
+
+Answer:
+- Involved services (for the orders.created event):
+  - order-service: PRODUCES orders.created
+  - billing-service: CONSUMES orders.created
+  - notification-service: CONSUMES orders.created
+  (inventory-service is related but does not consume orders.created directly; it deals with inventory.reserved) 
+
+- Involved teams (per the system knowledge graph ownership for these services):
+  - platform
+  - commerce
+  - security
+  (these are listed as the owners for the relevant entities) 
+
+- ADR defining the compatibility/tooling requirements:
+  - ADR-0008: Introduce Schema Registry for Event Contracts. Decision: Adopt Confluent Schema Registry with Avro schemas for all events and enforce compatibility checks at CI/CD pipelines. This sets the tooling and compatibility rules for changing event schemas like orders.created) 
+
+- Additional context (for impact analysis and ownership tracking):
+  - Impact governance and ownership mapping are supported by the system knowledge graph and ADRs that formalize ownership and dependencies (e.g., ADR-0009). 
+
+If you’d like, I can synthesize a compact impact-approval checklist aligned to ADR-0008 and ADR-0009.

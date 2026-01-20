@@ -65,7 +65,7 @@ def main() -> None:
                 tmp.flush()
                 # Upload file
                 with open(tmp.name, "rb") as fh:
-                    f = client.files.create(file=fh, purpose="assistants")
+                    f = client.files.create(file=fh, purpose="user_data")
                 file_ids.append(f.id)
                 # Attach to store
                 client.vector_stores.files.create(vector_store_id=vs.id, file_id=f.id)

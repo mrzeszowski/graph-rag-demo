@@ -16,7 +16,7 @@ if __name__ == "__main__":
 from config import settings, ensure_openai_key
 from logger_factory import bind, get_logger, new_run_id
 from run_result_writer import write_run_result
-from ui import status
+from ui import print_qa_block, status, wait_for_enter
 
 log = get_logger("graph_rag.query")
 driver = GraphDatabase.driver(settings.uri, auth=(settings.user, settings.password))
@@ -123,9 +123,7 @@ def query(question: str) -> str:
     log_ctx.info("Search completed", latency_s=f"{time.perf_counter() - t0:0.2f}")
     # response = rag.search(query_text=question)
 
-    log_ctx.info("Question", question=question)
-
-    log_ctx.info("""Answer:\n%s""", response.answer)
+    print_qa_block(question=question, answer=response.answer, title="GRAPH_RAG")
 
     result = write_run_result(question=question, answer=response.answer, source="graph_rag")
     log_ctx.info("Saved run result", path=result.path)
@@ -139,6 +137,7 @@ async def main() -> None:
 
         ensure_openai_key()
         query(args.question)
+        wait_for_enter()
     finally:
         driver.close()
         embeddings.client.close()

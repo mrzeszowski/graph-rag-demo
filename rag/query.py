@@ -17,7 +17,7 @@ if __name__ == "__main__":
 from config import settings, ensure_openai_key
 from logger_factory import bind, get_logger, new_run_id
 from run_result_writer import write_run_result
-from ui import status
+from ui import print_qa_block, status, wait_for_enter
 
 log = get_logger("rag.query")
 client = OpenAI()
@@ -89,9 +89,7 @@ def query():
                     if getattr(p, "type", None) == "output_text":
                         out_text += getattr(p, "text", "")
 
-    log_ctx.info("Question", question=args.question)
-
-    log_ctx.info("""Answer:\n%s""", out_text)
+    print_qa_block(question=args.question, answer=out_text, title="RAG")
 
     result = write_run_result(question=args.question, answer=out_text, source="rag")
     log_ctx.info("Saved run result", path=result.path)
@@ -101,6 +99,7 @@ async def main() -> None:
     try:
         ensure_openai_key()
         query()
+        wait_for_enter()
     except Exception as e:
         log.exception("Error occurred during query: %s", e)
     finally:
