@@ -5,8 +5,8 @@ export RUN_RESULTS_PATH="$(python3 run_result_writer.py --start-session --header
 echo "Writing all results to: $RUN_RESULTS_PATH"
 
 scripts=(
-  "graph_rag/query.py"
   "rag/query.py"
+  "graph_rag/query.py"
 )
 
 questions=(
