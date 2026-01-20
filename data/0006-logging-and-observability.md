@@ -23,3 +23,10 @@ Adopt the ELK stack (Elasticsearch, Logstash, Kibana) for centralized logging. U
 ## References
 - [CNCF Observability Whitepaper](https://tag-observability.cncf.io/)  
 - Related: [ADR-0002: Database per Service](0002-database-per-service.md)  
+
+## Metadata
+- ADR: ADR-0006
+- Affects components: Platform observability
+- Uses technology: Elasticsearch; Logstash; Kibana; Prometheus; Grafana
+- Decision: Centralized logging and metrics
+- Related ADRs: ADR-0002

@@ -1,4 +1,4 @@
-# File: 0006-logging-and-observability.md
+# File: 0008-event-schema-registry.md
 
 # ADR-0008: Introduce Schema Registry for Event Contracts
 
@@ -22,4 +22,11 @@ Adopt Confluent Schema Registry with Avro schemas for all events. Enforce compat
 
 ## References
 - [Confluent Schema Registry Docs](https://docs.confluent.io/platform/current/schema-registry/index.html)  
-- Related: [ADR-0001: Use Kafka](0001-use-kafka-for-event-streaming.md), [ADR-0005: Switch to Pub/Sub](0005-switch-to-cloud-pubsub.md)  
+- Related: [ADR-0001: Use Kafka for Event Streaming](0001-use-kafka-for-event-streaming.md), [ADR-0005: Switch to Cloud Pub/Sub](0005-switch-to-cloud-pubsub.md)  
+
+## Metadata
+- ADR: ADR-0008
+- Affects components: Event producers and consumers
+- Uses technology: Confluent Schema Registry; Avro
+- Decision: Compatibility checks enforced in CI/CD
+- Related ADRs: ADR-0001; ADR-0005

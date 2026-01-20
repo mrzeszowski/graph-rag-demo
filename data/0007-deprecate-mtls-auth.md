@@ -1,4 +1,4 @@
-# File: 0006-logging-and-observability.md
+# File: 0007-deprecate-mtls-auth.md
 
 # ADR-0007: Deprecate mTLS Authentication
 
@@ -23,3 +23,10 @@ Deprecate mTLS in favor of OAuth2-only authentication.
 ## References
 - [NIST mTLS Guidance](https://csrc.nist.gov/publications/detail/sp/800-63/3/final)  
 - Amends: [ADR-0003](0003-service-to-service-authentication.md)  
+
+## Metadata
+- ADR: ADR-0007
+- Amends: ADR-0003
+- Affects components: All microservices
+- Disallowed option: mTLS
+- Selected option: OAuth2-only authentication

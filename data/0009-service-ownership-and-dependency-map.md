@@ -32,50 +32,57 @@ The following statements should be kept in a consistent, machine-readable bullet
 
 ### Entities
 Services (examples; replace with actual names used in the system):
-- Service: `api-gateway`
-- Service: `order-service`
-- Service: `inventory-service`
-- Service: `customer-service`
-- Service: `billing-service`
-- Service: `notification-service`
+- Service: API Gateway (id: `api-gateway`)
+- Service: Order Service (id: `order-service`)
+- Service: Inventory Service (id: `inventory-service`)
+- Service: Customer Service (id: `customer-service`)
+- Service: Billing Service (id: `billing-service`)
+- Service: Notification Service (id: `notification-service`)
 
 Owners:
-- Team: `platform`
-- Team: `commerce`
-- Team: `security`
+- Team: Platform Team (id: `platform`)
+- Team: Commerce Team (id: `commerce`)
+- Team: Security Team (id: `security`)
 
 Interfaces:
-- API: `public-http`
-- Event Topic/Stream: `orders.created`
-- Event Topic/Stream: `inventory.reserved`
+- API: Public HTTP API (id: `public-http`)
+- Event topic: `orders.created`
+- Event topic: `inventory.reserved`
 
 ### Relationships
 Ownership:
-- `platform` OWNS `api-gateway`
-- `commerce` OWNS `order-service`
-- `commerce` OWNS `inventory-service`
-- `commerce` OWNS `customer-service`
+- Platform Team OWNS API Gateway
+- Commerce Team OWNS Order Service
+- Commerce Team OWNS Inventory Service
+- Commerce Team OWNS Customer Service
 
 Runtime call dependencies:
-- `api-gateway` CALLS `order-service`
-- `api-gateway` CALLS `customer-service`
-- `order-service` CALLS `inventory-service`
-- `order-service` CALLS `billing-service`
+- API Gateway CALLS Order Service
+- API Gateway CALLS Customer Service
+- Order Service CALLS Inventory Service
+- Order Service CALLS Billing Service
 
 Event production/consumption:
-- `order-service` PRODUCES `orders.created`
-- `billing-service` CONSUMES `orders.created`
-- `notification-service` CONSUMES `orders.created`
-- `inventory-service` PRODUCES `inventory.reserved`
-- `order-service` CONSUMES `inventory.reserved`
+- Order Service PRODUCES `orders.created`
+- Billing Service CONSUMES `orders.created`
+- Notification Service CONSUMES `orders.created`
+- Inventory Service PRODUCES `inventory.reserved`
+- Order Service CONSUMES `inventory.reserved`
 
 Governance hooks (ties to other ADRs):
-- `public-http` ENFORCED_BY `api-gateway` (see ADR-0004)
-- service-to-service requests AUTHENTICATED_BY `oauth2` (see ADR-0003, ADR-0007)
-- event streams RUN_ON `cloud-pubsub` (see ADR-0005)
+- Public HTTP API (id: `public-http`) ENFORCED_BY API Gateway (see ADR-0004)
+- Service-to-service requests AUTHENTICATED_BY OAuth2 (see ADR-0003; ADR-0007)
+- Event streams RUN_ON Google Pub/Sub (id: `cloud-pubsub`) (see ADR-0005)
 
 ## References
 - Related: [ADR-0004: Adopt API Gateway](0004-adopt-api-gateway.md)
 - Related: [ADR-0003: Service-to-Service Authentication](0003-service-to-service-authentication.md)
 - Related: [ADR-0005: Switch to Cloud Pub/Sub](0005-switch-to-cloud-pubsub.md)
 - Related: [ADR-0008: Introduce Schema Registry](0008-event-schema-registry.md)
+
+## Metadata
+- ADR: ADR-0009
+- Service IDs: `api-gateway`; `order-service`; `inventory-service`; `customer-service`; `billing-service`; `notification-service`
+- Team IDs: `platform`; `commerce`; `security`
+- API ID: `public-http`
+- Event topic IDs: `orders.created`; `inventory.reserved`

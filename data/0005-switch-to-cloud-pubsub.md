@@ -10,7 +10,7 @@ Supersedes: [ADR-0001: Use Kafka for Event Streaming](0001-use-kafka-for-event-s
 Running Kafka clusters proved to be a heavy operational burden. Our cloud provider offers a fully managed Pub/Sub service with lower maintenance overhead. This document is created in answer for needs of 'System Knowledge Graph'.
 
 ## Decision
-Switch from Apache Kafka to Cloud Pub/Sub as the event streaming platform.
+Switch from Apache Kafka to Google Pub/Sub as the event streaming platform.
 
 ## Consequences
 - Reduced operational complexity.  
@@ -25,3 +25,10 @@ Switch from Apache Kafka to Cloud Pub/Sub as the event streaming platform.
 ## References
 - [Google Pub/Sub Docs](https://cloud.google.com/pubsub/docs)  
 - Supersedes: [ADR-0001](0001-use-kafka-for-event-streaming.md)  
+
+## Metadata
+- ADR: ADR-0005
+- Supersedes: ADR-0001
+- Affects components: All services using event streaming
+- Uses technology: Google Pub/Sub
+- Replaces technology: Apache Kafka

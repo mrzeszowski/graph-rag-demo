@@ -4,7 +4,7 @@
 
 Status: Accepted  
 Date: 2024-01-17  
-Related: [ADR-0001: Use Kafka](0001-use-kafka-for-event-streaming.md), [ADR-0005: Switch to Cloud Pub/Sub](0005-switch-to-cloud-pubsub.md)
+Related: [ADR-0001: Use Kafka for Event Streaming](0001-use-kafka-for-event-streaming.md), [ADR-0005: Switch to Cloud Pub/Sub](0005-switch-to-cloud-pubsub.md)
 
 ## Context
 Teams frequently ask “what is the current decision?” and “what changed over time?”. In practice, older ADRs still show up in search results and can be mistaken for current guidance unless the lineage is explicit and queryable. This document is created in answer for needs of 'System Knowledge Graph'.
@@ -56,6 +56,13 @@ Rationale links:
 - `ADR-0001` ENABLED `event-replay`
 
 ## References
-- Example lineage pair: [ADR-0001: Use Kafka](0001-use-kafka-for-event-streaming.md) → [ADR-0005: Switch to Cloud Pub/Sub](0005-switch-to-cloud-pubsub.md)
+ - Example lineage pair: [ADR-0001: Use Kafka for Event Streaming](0001-use-kafka-for-event-streaming.md) → [ADR-0005: Switch to Cloud Pub/Sub](0005-switch-to-cloud-pubsub.md)
 - Related: [ADR-0003: Service-to-Service Authentication](0003-service-to-service-authentication.md), [ADR-0007: Deprecate mTLS](0007-deprecate-mtls-auth.md)
 - Related: [ADR-0008: Introduce Schema Registry](0008-event-schema-registry.md)
+
+## Metadata
+- ADR: ADR-0010
+- Decision: Lineage metadata is mandatory
+- Relationship types: SUPERSEDES; AMENDS; RELATED_TO
+- Requires section: Rationale Delta (for supersedes/amends)
+- Related ADRs: ADR-0001; ADR-0005; ADR-0003; ADR-0007; ADR-0008

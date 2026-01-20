@@ -1,0 +1,109 @@
+timestamp: 2026-01-20T19:00:02.154978+01:00
+session: true
+header: run.sh batch
+
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-20T19:00:18.693165+01:00
+source: graph_rag
+
+Question:
+What is our current event streaming platform, and which ADR superseded the previous one? (ids + dates)
+
+Answer:
+- Current event streaming platform: Google Pub/Sub.
+- ADR that superseded the previous one: ADR-0005 — Switch to Cloud Pub/Sub, dated 2023-06-05, supersedes ADR-0001: Use Kafka for Event Streaming (dated 2022-09-14).
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-20T19:01:16.482225+01:00
+source: rag
+
+Question:
+What is our current event streaming platform, and which ADR superseded the previous one? (ids + dates)
+
+Answer:
+- Current event streaming platform: Google Pub/Sub (Cloud Pub/Sub). ADR-0005 Switch to Cloud Pub/Sub. Date: 2023-06-05. Supersedes: ADR-0001: Use Kafka for Event Streaming. 
+
+- Previous ADR (superseded): ADR-0001: Use Kafka for Event Streaming. Date: 2022-09-14. Superseded by: ADR-0005 Switch to Cloud Pub/Sub.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-20T19:01:46.082827+01:00
+source: graph_rag
+
+Question:
+Given we switched to Pub/Sub, what ADR(s) still govern event contract/schema governance, and what tooling do we use?
+
+Answer:
+- ADR governing event contract/schema governance: ADR-0008 – Introduce Schema Registry for Event Contracts.
+- Tooling used: Confluent Schema Registry with Avro schemas, with compatibility checks enforced in CI/CD pipelines.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-20T19:02:39.878687+01:00
+source: rag
+
+Question:
+Given we switched to Pub/Sub, what ADR(s) still govern event contract/schema governance, and what tooling do we use?
+
+Answer:
+- ADRs currently governing event contract/schema governance:
+  - ADR-0005: Switch to Cloud Pub/Sub. This ADR governs the event streaming platform we use (Pub/Sub) after switching from Kafka.  In practice, our topics are consumed/produced on Google Pub/Sub as the current event backbone. 
+  - ADR-0008: Introduce Schema Registry for Event Contracts. This ADR governs event schema governance, including using a schema registry (Confluent Schema Registry) and Avro schemas with compatibility checks. 
+
+- Tooling we use for this governance:
+  - Google Cloud Pub/Sub as the event streaming platform (per ADR-0005). 
+  - Confluent Schema Registry (with Avro) for event contracts/schema governance, with compatibility checks enforced in CI/CD pipelines. 
+  - There is explicit emphasis that event contracts require registering schemas (strong governance and an enforced workflow). 
+
+In short: Pub/Sub is governed by ADR-0005, event schema governance is governed by ADR-0008, and our tooling is Confluent Schema Registry (Avro) plus CI/CD checks to enforce compatibility, all in support of the Pub/Sub-based event architecture.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-20T19:03:04.167205+01:00
+source: graph_rag
+
+Question:
+Timeline of messaging platform decisions?
+
+Answer:
+- 2022-09-14: ADR-0001 — Use Kafka for Event Streaming (Accepted). Initial decision to use Apache Kafka as the event streaming backbone for decoupled services.
+
+- 2023-06-05: ADR-0005 — Switch to Cloud Pub/Sub (Accepted). Supersedes ADR-0001; decision to switch to Google Pub/Sub to reduce operational overhead and improve cloud integration. Requires migration of existing Kafka topics.
+
+Current status: ADR-0005 remains the controlling decision; Kafka is no longer the active platform in this timeline.
+
+
+----- RUN RECORD -----
+timestamp: 2026-01-20T19:03:59.608112+01:00
+source: rag
+
+Question:
+Timeline of messaging platform decisions?
+
+Answer:
+Here’s a concise, date-driven timeline of the messaging/platform decisions (the ADRs), in chronological order:
+
+- 2022-09-14 — ADR-0001: Use Kafka for Event Streaming. Established Kafka as the initial messaging backbone for event-driven inter-service communication. 
+
+- 2022-11-01 — ADR-0002: Database per Service. (Note: not a messaging decision, included for context on overall platform governance.) 
+
+- 2023-01-20 — ADR-0003: Service-to-Service Authentication with OAuth2. Defined OAuth2-based authentication for service-to-service calls. 
+
+- 2023-02-15 — ADR-0004: Adopt API Gateway for External Traffic. Chose Kong as the single entry point for external clients. 
+
+- 2023-06-05 — ADR-0005: Switch to Cloud Pub/Sub. Replaced self-managed Kafka with Google Cloud Pub/Sub for event streaming. 
+
+- 2023-08-10 — ADR-0006: Centralized Logging and Observability. Standardized logging/observability (ELK stack, Prometheus/Grafana). 
+
+- 2023-09-12 — ADR-0007: Deprecate mTLS Authentication. Deprecated mTLS in favor of OAuth2-based approaches. 
+
+- 2023-10-20 — ADR-0008: Introduce Schema Registry for Event Contracts. Adopt Confluent Schema Registry with Avro for events. 
+
+- 2024-01-10 — ADR-0009: Define Service Ownership and Dependency Map. Document ownership and service dependencies. 
+
+- 2024-01-17 — ADR-0010: Establish ADR Lineage (Supersedes/Amends) Metadata. Capture and formalize ADR lineage and supersession. 
+
+If you’d like, I can extract a short summary of what each ADR decided and how it changed the messaging/eventing architecture.

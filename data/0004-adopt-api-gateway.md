@@ -23,3 +23,10 @@ Adopt Kong API Gateway as the single entry point for all external client request
 ## References
 - [Kong Gateway Docs](https://docs.konghq.com/)  
 - Related: [ADR-0003: Service-to-Service Authentication](0003-service-to-service-authentication.md)  
+
+## Metadata
+- ADR: ADR-0004
+- Affects components: API Gateway
+- Uses technology: Kong API Gateway
+- Decision: Single external entry point
+- Related ADRs: ADR-0003

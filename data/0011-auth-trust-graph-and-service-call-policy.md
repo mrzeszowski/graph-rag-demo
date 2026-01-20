@@ -40,11 +40,11 @@ The goal is to represent authentication/authorization as edges with attributes.
 
 ### Entities
 Services:
-- Service: `api-gateway`
-- Service: `order-service`
-- Service: `inventory-service`
-- Service: `billing-service`
-- Service: `notification-service`
+- Service: API Gateway (id: `api-gateway`)
+- Service: Order Service (id: `order-service`)
+- Service: Inventory Service (id: `inventory-service`)
+- Service: Billing Service (id: `billing-service`)
+- Service: Notification Service (id: `notification-service`)
 
 Identities:
 - Client: `order-service-client`
@@ -61,23 +61,30 @@ Trust boundaries:
 
 ### Relationships
 Authentication mechanism:
-- internal service-to-service AUTHENTICATED_BY `oauth2-client-credentials` (ADR-0003)
-- mTLS DISALLOWED (ADR-0007)
+- Internal service-to-service AUTHENTICATED_BY OAuth2 Client Credentials (see ADR-0003)
+- mTLS DISALLOWED (see ADR-0007)
 
 Entry point:
-- external requests ENTER_THROUGH `api-gateway` (ADR-0004)
-- `api-gateway` ENFORCES `external-to-internal` boundary
+- External requests ENTER_THROUGH API Gateway (see ADR-0004)
+- API Gateway ENFORCES `external-to-internal` boundary
 
 Allowed calls (examples; replace with real policies):
-- `api-gateway` MAY_CALL `order-service` REQUIRES_SCOPE `orders:write`
-- `order-service` MAY_CALL `inventory-service` REQUIRES_SCOPE `inventory:reserve`
-- `order-service` MAY_CALL `billing-service` REQUIRES_SCOPE `orders:write`
-- `billing-service` MAY_CALL `notification-service` REQUIRES_SCOPE `orders:read`
+- API Gateway MAY_CALL Order Service REQUIRES_SCOPE `orders:write`
+- Order Service MAY_CALL Inventory Service REQUIRES_SCOPE `inventory:reserve`
+- Order Service MAY_CALL Billing Service REQUIRES_SCOPE `orders:write`
+- Billing Service MAY_CALL Notification Service REQUIRES_SCOPE `orders:read`
 
 Policy ownership:
-- `security` OWNS_POLICY `service-call-policy`
+- Security Team (id: `security`) OWNS_POLICY `service-call-policy`
 
 ## References
 - Amends: [ADR-0003: Service-to-Service Authentication](0003-service-to-service-authentication.md)
 - Related: [ADR-0007: Deprecate mTLS](0007-deprecate-mtls-auth.md)
 - Related: [ADR-0004: Adopt API Gateway](0004-adopt-api-gateway.md)
+
+## Metadata
+- ADR: ADR-0011
+- Amends: ADR-0003
+- Related ADRs: ADR-0007; ADR-0004
+- Service IDs: `api-gateway`; `order-service`; `inventory-service`; `billing-service`; `notification-service`
+- Policy IDs: `service-call-policy`; trust boundaries `external-to-internal`; `internal-mesh`

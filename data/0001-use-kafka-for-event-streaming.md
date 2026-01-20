@@ -25,3 +25,10 @@ Adopt Apache Kafka as the event streaming platform. Deploy it on our Kubernetes 
 ## References
 - [Kafka documentation](https://kafka.apache.org/documentation/)  
 - Related: [ADR-0008: Introduce Schema Registry](0008-event-schema-registry.md)  
+
+## Metadata
+- ADR: ADR-0001
+- Superseded by: ADR-0005
+- Affects components: Order Service; Customer Service; Inventory Service
+- Uses technology: Apache Kafka
+- Related ADRs: ADR-0005; ADR-0008
